@@ -1,0 +1,12 @@
+name: mri_sarcoma_ai
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - scikit-learn
+  - matplotlib
+  - qtpy
+  - pytest
+  - pip
+  - pip:
+      - pyradiomics
