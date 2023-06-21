@@ -1,4 +1,5 @@
 import os
+from functools import partial
 
 import SimpleITK
 import numpy as np
@@ -10,6 +11,7 @@ from dcmrtstruct2nii.exceptions import InvalidFileFormatException
 from radiomics import featureextractor
 from tqdm import tqdm
 from pathlib import Path
+from multiprocessing.pool import Pool
 
 
 def _match1row(df, column_name, value):
@@ -23,35 +25,25 @@ class WikiSarcoma:
     maps data with clinical info csv for histological grades
     """
 
-    def __init__(self, data_path, clinical_data_path, radiomic_params, extract_label=1):
+    def __init__(self, data_path, clinical_data_path, radiomic_params, extract_label=255, num_cpu=2):
         self.clinical_csv = pd.read_csv(clinical_data_path, encoding='cp1252')
         if not isinstance(data_path, Path):
             self.data_path = Path(data_path)
         else:
             self.data_path = data_path
 
-        self._y = np.array([])
-        self._x = []
-
         self.extractor = featureextractor.RadiomicsFeatureExtractor(radiomic_params)
-
-        for pt_path in tqdm(list(self.data_path.glob('*/'))):
-            pt_id = pt_path.name
-            target = _match1row(self.clinical_csv, "Patient ID", pt_id)["Grade"].iloc[0]
-            self._y = np.append(self._y, target)
-
-            image = SimpleITK.ReadImage(pt_path / 'image.nii.gz')
-            mask = SimpleITK.ReadImage(pt_path / 'mask_GTV_Mass.nii.gz')
-            result = self.extractor.execute(image, mask, extract_label)
-
-            feature = np.array([])
-
-            for key, value in six.iteritems(result):
-                if key.startswith("original_"):
-                    feature = np.append(feature, result[key])
-            self._x.append(feature)
+        partial_data_extractor = partial(_one_extraction, extractor=self.extractor, clinical_csv=self.clinical_csv,
+                                         extract_label=extract_label)
+        with Pool(num_cpu) as pool:
+            self._x = []
+            self._y = []
+            for feature, target in tqdm(pool.imap(partial_data_extractor, list(self.data_path.glob('*/')))):
+                self._x.append(feature)
+                self._y.append(target)
 
         self._x = np.array(self._x)
+        self._y = np.array(self._y)
 
         # convert y values from strings to 0, 1, 2
         self._y = np.searchsorted(np.unique(self._y), self._y).astype(int)
@@ -72,6 +64,22 @@ class WikiSarcoma:
         """
         return self._y
 
+def _one_extraction(pt_path, extractor, clinical_csv, extract_label):
+    pt_id = pt_path.name
+    target = _match1row(clinical_csv, "Patient ID", pt_id)["Grade"].iloc[0]
+    # _y = np.append(_y, target)
+
+    image = SimpleITK.ReadImage(pt_path / 'image.nii.gz')
+    mask = SimpleITK.ReadImage(pt_path / 'mask_GTV_Mass.nii.gz')
+    result = extractor.execute(image, mask, extract_label)
+
+    feature = np.array([])
+
+    for key, value in six.iteritems(result):
+        if key.startswith("original_"):
+            feature = np.append(feature, result[key])
+    # self._x.append(feature)
+    return feature, target
 
 def convert_wiki2nii(csv_path, data_path, output_path, modality="MR"):
     csv = pd.read_csv(csv_path)
