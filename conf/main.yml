@@ -1,0 +1,17 @@
+defaults:
+  - dataset: wiki_sarcoma
+  - pipelines: main_pipeline
+  - metrics: default
+  - hydra/run/dir: job_timestamp
+  - _self_
+  - optional local_env: env
+  - override hydra/job_logging: custom
+
+name:
+output_root: ./outputs
+monitor: f1_micro
+mode: max
+seed: 122
+
+
+

@@ -1,0 +1,12 @@
+# @package _global_
+
+pipeline:
+  _target_:
+
+feature_selection:
+  _target_:
+
+bootstrap:
+  _target_:
+
+algorithms:

@@ -1,0 +1,7 @@
+# @package _global_
+
+metrics:
+  - accuracy
+  - f1_micro
+  - roc_auc_ovr
+  - roc_auc_ovo
