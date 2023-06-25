@@ -1,18 +1,13 @@
 name: mri_sarcoma_ai
 channels:
   - defaults
-  - conda-forge
 dependencies:
-  - python=3.9
-  - tqdm
-  - scikit-learn
-  - pydicom
-  - pandas
-  - matplotlib
-  - qtpy
-  - pytest
+  - python=3.10
   - pip
   - pip:
-      - pyradiomics
+      - numpy
+      - autorad
       - dcmrtstruct2nii
+      - pytest
       - hydra-core
+      - jupyter
