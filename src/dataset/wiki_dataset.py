@@ -17,7 +17,7 @@ from multiprocessing.pool import Pool
 def _match1row(df, column_name, value):
     return df.loc[df[column_name] == value]
 
-
+# TODO take out extraction class out of dataset
 class WikiSarcoma:
     """
     takes in data_path to nii files of wiki sarcoma from https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=21266533#21266533715ed75afd8744ec84c7d0b7daa64456
@@ -32,8 +32,7 @@ class WikiSarcoma:
         else:
             self.data_path = data_path
 
-        self.extractor = featureextractor.RadiomicsFeatureExtractor(radiomic_params)
-        partial_data_extractor = partial(_one_extraction, extractor=self.extractor, clinical_csv=self.clinical_csv,
+        partial_data_extractor = partial(_one_extraction, clinical_csv=self.clinical_csv,
                                          extract_label=extract_label)
         with Pool(num_cpu) as pool:
             self._x = []
@@ -64,7 +63,8 @@ class WikiSarcoma:
         """
         return self._y
 
-def _one_extraction(pt_path, extractor, clinical_csv, extract_label):
+
+def _one_extraction(pt_path, clinical_csv, extract_label):
     pt_id = pt_path.name
     target = _match1row(clinical_csv, "Patient ID", pt_id)["Grade"].iloc[0]
     # _y = np.append(_y, target)
@@ -80,6 +80,7 @@ def _one_extraction(pt_path, extractor, clinical_csv, extract_label):
             feature = np.append(feature, result[key])
     # self._x.append(feature)
     return feature, target
+
 
 def convert_wiki2nii(csv_path, data_path, output_path, modality="MR"):
     csv = pd.read_csv(csv_path)
