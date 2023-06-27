@@ -17,6 +17,7 @@ from multiprocessing.pool import Pool
 def _match1row(df, column_name, value):
     return df.loc[df[column_name] == value]
 
+
 # TODO take out extraction class out of dataset
 class WikiSarcoma:
     """

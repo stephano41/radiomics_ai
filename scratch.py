@@ -12,28 +12,49 @@
 # from radiomics import featureextractor
 #
 # import os
+from pathlib import Path
+
+import pandas as pd
+import yaml
 from matplotlib import pyplot as plt
 
 # params = os.path.join(os.getcwd(), 'example_settings', 'Params.yaml')
 if __name__ == '__main__':
-    # wiki_sarcoma = WikiSarcoma('./data', 'example_data/INFOclinical_STS.csv', params, 255, 4)
-    from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
-    root_dir='./data'
+    from autorad.models import MLClassifier
+    from autorad.data import FeatureDataset
 
-    paths_df = get_paths_with_separate_folder_per_case(root_dir, relative=True, image_stem='image',
-                                                       mask_stem='mask_GTV_Mass')
+    feature_dataset = FeatureDataset(pd.read_csv('outputs/extracted_features.csv'),
+                                     target="Grade",
+                                     ID_colname="ID")
 
-    from src.dataset import ImageDataset
-    import logging
+    with open('./outputs/splits.yml', 'r') as f:
+        feature_dataset.load_splits((yaml.safe_load(f)))
 
-    logging.getLogger().setLevel(logging.ERROR)
+    models = [
+        MLClassifier.from_sklearn("Random Forest", {})
+    ]
 
-    image_dataset = ImageDataset(
-        paths_df,
-        ID_colname='ID',
-        root_dir=root_dir
+    # from autorad.preprocessing import run_auto_preprocessing
+    #
+    # run_auto_preprocessing(
+    #     data=feature_dataset.data,
+    #     use_feature_selection=True,
+    #     feature_selection_methods=["anova", "lasso", "boruta"],
+    #     use_oversampling=False,
+    #     result_dir=Path('./outputs')
+    # )
+
+    from src.training import Trainer
+
+    trainer = Trainer(
+        dataset=feature_dataset,
+        models=models,
+        result_dir='./outputs',
+        multi_class='ovr',
+        num_classes=3
     )
-
-    image_dataset.plot_examples(n=10, window=None, label=255)
-
-    plt.show()
+    #
+    experiment_name = 'sarcoma_tutorial'
+    #
+    trainer.set_optimizer('optuna', n_trials=50)
+    trainer.run(auto_preprocess=True, experiment_name=experiment_name)
