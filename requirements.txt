@@ -1,0 +1,7 @@
+autorad
+dcmrtstruct2nii
+pytest
+hydra-core
+jupyter
+rich
+shap @ git+https://github.com/slundberg/shap.git
