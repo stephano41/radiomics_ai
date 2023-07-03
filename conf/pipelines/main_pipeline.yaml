@@ -1,0 +1,45 @@
+# @package _global_
+
+pipeline:
+  _target_: main.draft_pipeline
+
+# ovr doesn't seem to work
+multi_class: ovo
+name: wiki_sarcoma
+labels: [0,1,2]
+
+dataset:
+  data_dir: ./data
+  image_stem: image
+  mask_stem: mask_GTV_Mass
+
+feature_dataset:
+  label_csv_path: example_data/INFOclinical_STS.csv
+  target_column: Grade
+  extraction_params: ./conf/radiomic_params/mr_default.yaml
+  n_jobs: -1
+  label_csv_encoding: cp1252
+  feature_df_merger: {_target_: main.wiki_sarcoma_df_merger}
+  existing_feature_df:
+
+split:
+  existing_split:
+  method: train_with_cross_validation_test
+
+models:
+  - Random Forest
+  - SVM
+  - XGBoost
+
+preprocessing:
+  use_feature_selection: True
+  feature_selection_methods:
+    - anova
+    - lasso
+#    boruta doesn't seem to work
+#    - boruta
+  use_oversampling: False
+
+optimizer:
+  n_trials: 100
+

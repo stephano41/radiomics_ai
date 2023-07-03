@@ -3,11 +3,7 @@ channels:
   - defaults
 dependencies:
   - python=3.10
+  - numpy
   - pip
   - pip:
-      - numpy
-      - autorad
-      - dcmrtstruct2nii
-      - pytest
-      - hydra-core
-      - jupyter
+      - -r requirements.txt

@@ -21,15 +21,25 @@ class Trainer(OrigTrainer):
                  models: Sequence[MLClassifier],
                  result_dir: PathLike,
                  multi_class: str = "raise",
-                 num_classes = 2,
+                 labels = None,
                  average = "macro"
                  ):
 
         self.multi_class = multi_class
-        self.num_classes = num_classes
+        # self.num_classes = num_classes
 
-        self.auc_scorer = partial(roc_auc_score, average=average, multi_class=self.multi_class)
+        self.auc_scorer = partial(roc_auc_score, average=average, multi_class=self.multi_class, labels=labels)
         super().__init__(dataset, models, result_dir)
+
+    def get_auc(self, y_true, y_pred):
+        try:
+            auc = self.auc_scorer(y_true, y_pred)
+        except ValueError as e:
+            if 'Only one class present' not in str(e):
+                raise ValueError(e)
+            log.error("Only one class present in y_true. ROC AUC score is not defined in that case")
+            auc = np.nan
+        return auc
 
     def run(
         self,
@@ -43,7 +53,7 @@ class Trainer(OrigTrainer):
         if not mlflow.get_experiment_by_name(experiment_name):
             mlflow.create_experiment(experiment_name)
         else:
-            log.warn("Running training in existing experiment.")
+            log.warning("Running training in existing experiment.")
         mlflow.set_experiment(experiment_name)
         with mlflow.start_run():
             study = self.optimizer.create_study(
@@ -89,16 +99,21 @@ class Trainer(OrigTrainer):
                 log.error(f"Training {model.name} failed.")
                 return np.nan
 
-            if self.num_classes == 2:
+            if self.multi_class == 'raise':
                 y_pred = model.predict_proba_binary(X_val)
-            elif self.num_classes >2:
+            elif self.multi_class == 'ovr' or self.multi_class == 'ovo':
                 y_pred = model.predict_proba(X_val)
             else:
-                raise ValueError(f"num_classes must be >= 2")
+                raise ValueError(f"multi_class must be 'raise', 'ovr', 'ovo', got {self.multi_class}")
 
-            auc_val = self.auc_scorer(y_val, y_pred)
+            try:
+                auc_val = self.get_auc(y_val, y_pred)
+            except ValueError as e:
+                log.error(f"Evaluating {model.name} failed on auc. \n{e}")
+                return np.nan
+
             aucs.append(auc_val)
-        auc = float(np.mean(aucs))
+        auc = float(np.nanmean(aucs))
         trial.set_user_attr("model", model)
         trial.set_user_attr("AUC", auc)
 
@@ -106,11 +121,13 @@ class Trainer(OrigTrainer):
 
     def log_train_auc(self, model: MLClassifier, data: TrainingData):
         y_true = data.y.train
-        if self.num_classes == 2:
+        if self.multi_class == 'raise':
             y_pred_proba = model.predict_proba_binary(data.X.train)
-        elif self.num_classes > 2:
+        elif self.multi_class == 'ovr' or self.multi_class == 'ovo':
             y_pred_proba = model.predict_proba(data.X.train)
         else:
-            raise ValueError(f"num_classes must be >= 2")
-        train_auc = self.auc_scorer(y_true, y_pred_proba)
+            raise ValueError(f"multi_class must be 'raise', 'ovr', 'ovo', got {self.multi_class}")
+
+        train_auc = self.get_auc(y_true, y_pred_proba)
+
         mlflow.log_metric("train_AUC", float(train_auc))

@@ -114,3 +114,5 @@ __MACOSX/
 /outputs/
 /archive/
 /conf/local_env/*.yaml
+/conf/local_env/*.yml
+
