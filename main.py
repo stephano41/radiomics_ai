@@ -9,7 +9,8 @@ from autorad.models import MLClassifier
 from autorad.preprocessing import run_auto_preprocessing
 from hydra.utils import instantiate
 from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
-from src.dataset import ImageDataset, FeatureDataset
+from src.dataset import ImageDataset
+from autorad.data import FeatureDataset
 from src.feature_extraction import FeatureExtractor
 from src.training import Trainer
 

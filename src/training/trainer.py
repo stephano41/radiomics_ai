@@ -41,34 +41,34 @@ class Trainer(OrigTrainer):
             auc = np.nan
         return auc
 
-    def run(
-        self,
-        auto_preprocess: bool = False,
-        experiment_name="model_training",
-    ):
-        """
-               Run hyperparameter optimization for all the models.
-               """
-        mlflow.set_tracking_uri('file:/' + str(self.result_dir))
-        if not mlflow.get_experiment_by_name(experiment_name):
-            mlflow.create_experiment(experiment_name)
-        else:
-            log.warning("Running training in existing experiment.")
-        mlflow.set_experiment(experiment_name)
-        with mlflow.start_run():
-            study = self.optimizer.create_study(
-                study_name=experiment_name,
-            )
-
-            study.optimize(
-                lambda trial: self._objective(trial, auto_preprocess),
-                n_trials=self.optimizer.n_trials,
-            )
-            best_trial = study.best_trial
-            self.log_to_mlflow(
-                best_trial=best_trial,
-                auto_preprocess=auto_preprocess,
-            )
+    # def run(
+    #     self,
+    #     auto_preprocess: bool = False,
+    #     experiment_name="model_training",
+    # ):
+    #     """
+    #            Run hyperparameter optimization for all the models.
+    #            """
+    #     mlflow.set_tracking_uri('file:/' + str(self.result_dir))
+    #     if not mlflow.get_experiment_by_name(experiment_name):
+    #         mlflow.create_experiment(experiment_name)
+    #     else:
+    #         log.warning("Running training in existing experiment.")
+    #     mlflow.set_experiment(experiment_name)
+    #     with mlflow.start_run():
+    #         study = self.optimizer.create_study(
+    #             study_name=experiment_name,
+    #         )
+    #
+    #         study.optimize(
+    #             lambda trial: self._objective(trial, auto_preprocess),
+    #             n_trials=self.optimizer.n_trials,
+    #         )
+    #         best_trial = study.best_trial
+    #         self.log_to_mlflow(
+    #             best_trial=best_trial,
+    #             auto_preprocess=auto_preprocess,
+    #         )
 
     def _objective(self, trial: Trial, auto_preprocess=False) -> float:
         """Get params from optuna trial, return the metric."""
@@ -113,11 +113,15 @@ class Trainer(OrigTrainer):
                 return np.nan
 
             aucs.append(auc_val)
-        auc = float(np.nanmean(aucs))
+        model.fit(
+            data.X.train, data.y.train
+        )  # refit on the whole training set (important for cross-validation)
+        auc_val = float(np.nanmean(aucs))
+        trial.set_user_attr("AUC_val", auc_val)
         trial.set_user_attr("model", model)
-        trial.set_user_attr("AUC", auc)
+        trial.set_user_attr("data_preprocessed", data)
 
-        return auc
+        return auc_val
 
     def log_train_auc(self, model: MLClassifier, data: TrainingData):
         y_true = data.y.train
@@ -130,4 +134,4 @@ class Trainer(OrigTrainer):
 
         train_auc = self.get_auc(y_true, y_pred_proba)
 
-        mlflow.log_metric("train_AUC", float(train_auc))
+        mlflow.log_metric("AUC_train", float(train_auc))
