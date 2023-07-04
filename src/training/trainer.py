@@ -133,5 +133,5 @@ class Trainer(OrigTrainer):
             raise ValueError(f"multi_class must be 'raise', 'ovr', 'ovo', got {self.multi_class}")
 
         train_auc = self.get_auc(y_true, y_pred_proba)
-
+        print(mlflow.get_tracking_uri())
         mlflow.log_metric("AUC_train", float(train_auc))

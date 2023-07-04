@@ -14,3 +14,7 @@ RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt
 
 COPY . .
 
+#CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--allow-root", "--no-browser"]
+#EXPOSE 8000
+CMD ["mlflow", "ui", "--host=0.0.0.0", "--port=5000"]
+EXPOSE 5000

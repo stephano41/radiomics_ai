@@ -17,6 +17,7 @@ from src.training import Trainer
 logger = logging.getLogger(__name__)
 
 os.environ["HYDRA_FULL_ERROR"] = '1'
+os.environ['AUTORAD_RESULT_DIR'] = './'
 
 
 @hydra.main(config_path='conf', config_name='main', version_base='1.3')
