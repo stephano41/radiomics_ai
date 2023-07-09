@@ -1,7 +1,7 @@
 # @package _global_
 
 pipeline:
-  _target_: main.draft_pipeline
+  _target_: src.pipeline.draft_pipeline
 
 # ovr doesn't seem to work
 multi_class: ovo
@@ -19,7 +19,7 @@ feature_dataset:
   extraction_params: ./conf/radiomic_params/mr_default.yaml
   n_jobs: -1
   label_csv_encoding: cp1252
-  feature_df_merger: {_target_: main.wiki_sarcoma_df_merger}
+  feature_df_merger: {_target_: src.pipeline.wiki_sarcoma_df_merger}
   existing_feature_df:
 
 split:
@@ -41,5 +41,5 @@ preprocessing:
   use_oversampling: False
 
 optimizer:
-  n_trials: 100
+  n_trials: 10
 

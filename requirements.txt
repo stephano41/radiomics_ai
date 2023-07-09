@@ -4,5 +4,5 @@ pytest
 hydra-core
 jupyter
 rich
-shap @ git+https://github.com/slundberg/shap.git
 Boruta @ git+https://github.com/Jorjatorz/boruta_py_2.git
+# shap==0.42 --install-option='--no-deps'
