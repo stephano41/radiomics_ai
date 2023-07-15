@@ -1,0 +1,16 @@
+version: '3'
+services:
+    app:
+        container_name: mri_sarcoma_aido
+        build:
+            context: .
+            dockerfile: Dockerfile
+        volumes:
+            - ./outputs/:/app/outputs/
+        environment:
+            - AUTORAD_RESULT_DIR=/app/app/outputs/
+            - HYDRA_FULL_ERROR=1
+        tty: true
+        stdin_open: true
+        ports:
+            - 8000:8000

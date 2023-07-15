@@ -14,9 +14,7 @@ RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt
 #RUN pip install -r requirements.txt
 RUN pip install --no-deps shap==0.42
 
-#COPY . .
+COPY . .
 
-#CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--allow-root", "--no-browser"]
-#EXPOSE 8000
-CMD ["mlflow", "ui", "--host=0.0.0.0", "--port=5000", "--backend-store-uri=./outputs/mlflow"]
-EXPOSE 5000
+CMD ["mlflow", "ui", "--host=0.0.0.0", "--port=8000", "--backend-store-uri=./outputs/models"]
+EXPOSE 8000

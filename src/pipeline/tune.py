@@ -12,18 +12,17 @@ from autorad.models import MLClassifier
 from autorad.preprocessing import run_auto_preprocessing
 from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
 from hydra.utils import instantiate
+from autorad import evaluation
 
 from src.dataset import ImageDataset
 from src.feature_extraction import FeatureExtractor
 from src.training import Trainer
+from src.inference import get_artifacts_from_last_run
 
 logger = logging.getLogger(__name__)
 
 
 def draft_pipeline(config):
-    print(f"2. {os.getenv('AUTORAD_RESULT_DIR')}")
-    print(f"2. {os.getenv('HYDRA_FULL_ERROR')}")
-    print(mlflow.get_tracking_uri())
     # setup dataset, extract features, split the data
     dataset = get_data(**config.dataset)
 
@@ -40,9 +39,6 @@ def draft_pipeline(config):
         with open(config.split.existing_split, 'r') as f:
             feature_dataset.load_splits((yaml.safe_load(f)))
 
-    print(f"3. {os.getenv('AUTORAD_RESULT_DIR')}")
-    print(f"3. {os.getenv('HYDRA_FULL_ERROR')}")
-    print(mlflow.get_tracking_uri())
     # initialise models
     if config.models is None:
         models = MLClassifier.initialize_default_sklearn_models()
@@ -54,10 +50,7 @@ def draft_pipeline(config):
                            result_dir=Path(output_dir),
                            **config.preprocessing)
 
-    print(f"4. {os.getenv('AUTORAD_RESULT_DIR')}")
-    print(f"4. {os.getenv('HYDRA_FULL_ERROR')}")
-    print(mlflow.get_tracking_uri())
-
+    # start training
     trainer = Trainer(
         dataset=feature_dataset,
         models=models,
@@ -72,6 +65,11 @@ def draft_pipeline(config):
 
     trainer.set_optimizer('optuna', n_trials=config.optimizer.n_trials)
     trainer.run(auto_preprocess=True, experiment_name=experiment_name)
+
+    # start evaluation
+    artifacts = get_artifacts_from_last_run(experiment_name)
+
+    result_df = evaluation.evaluate_feature_dataset()
 
 
 def get_data(data_dir, image_stem='image', mask_stem='mask') -> ImageDataset:
