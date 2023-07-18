@@ -4,7 +4,6 @@ from pathlib import Path
 import logging
 
 import hydra
-import mlflow
 import pandas as pd
 import yaml
 from autorad.data import FeatureDataset
@@ -69,7 +68,11 @@ def draft_pipeline(config):
     # start evaluation
     artifacts = get_artifacts_from_last_run(experiment_name)
 
-    result_df = evaluation.evaluate_feature_dataset()
+    result_df = evaluation.evaluate_feature_dataset(dataset=feature_dataset,
+                                                    model=artifacts['model'],
+                                                    preprocessor=artifacts["preprocessor"],
+                                                    split="test")
+    print(result_df)
 
 
 def get_data(data_dir, image_stem='image', mask_stem='mask') -> ImageDataset:

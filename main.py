@@ -13,9 +13,6 @@ os.environ["HYDRA_FULL_ERROR"] = '1'
 
 @hydra.main(config_path='conf', config_name='main', version_base='1.3')
 def main(config):
-    print(f"1. {os.getenv('AUTORAD_RESULT_DIR')}")
-    print(f"1. {os.getenv('HYDRA_FULL_ERROR')}")
-
     instantiate(config.pipeline, config)
 
 
