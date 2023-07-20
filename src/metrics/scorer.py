@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 from sklearn.metrics import get_scorer, make_scorer, roc_auc_score
-from sklearn.metrics._scorer import _ThresholdScorer
+from sklearn.metrics._scorer import _ThresholdScorer, _ProbaScorer
 
 from src.metrics import specificity, negative_predictive_value
 
@@ -44,10 +44,10 @@ class Scorer:
 
     def no_information_rate(self, estimator, X, y) -> pd.DataFrame:
         result={}
-        for name, scorer in self._scores.items():
-            y_pred = self.get_output(estimator, X, scorer)
-            combinations = np.array(list(product(y, y_pred)))
-            result[name] = scorer.score_func(combinations[:, 0], combinations[:, 1])
+        for name, s in self._scores.items():
+            y_pred = self.get_output(estimator, X, s)
+            combinations = pd.DataFrame(list(product(y, y_pred)))
+            result[name] = s._score_func(np.asarray(list(combinations.iloc[:, 0])), np.asarray(list(combinations.iloc[:, 1])), **s._kwargs)
 
         return pd.DataFrame(result, index=[0])
 
@@ -57,6 +57,8 @@ class Scorer:
                 y_pred = estimator.decision_function(X)
             except (NotImplementedError, AttributeError):
                 y_pred = estimator.predict_proba(X)
+        elif isinstance(scorer, _ProbaScorer):
+            y_pred = estimator.predict_proba(X)
         else:
             y_pred = estimator.predict(X)
         return y_pred

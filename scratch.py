@@ -25,4 +25,4 @@ feature_dataset.split(method='train_with_cross_validation_test')
 model = KNeighborsClassifier(3)
 
 print(bootstrap(model, feature_dataset.X.to_numpy(), feature_dataset.y.to_numpy(), iters=20, num_cpu=1,
-                labels=[0,1,2]))
+                labels=[0,1,2], method='.632+'))
