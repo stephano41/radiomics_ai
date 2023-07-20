@@ -1,0 +1,1 @@
+from .infer_utils import get_artifacts_from_last_run
