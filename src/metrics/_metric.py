@@ -2,9 +2,12 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 
 
-def negative_predictive_value(y_true, y_pred, average='raise'):
+def negative_predictive_value(y_true, y_pred, average='raise', labels=None):
     # Check if it's a binary classification case
-    binary = len(np.unique(y_true)) <= 2
+    if labels is None:
+        binary = len(np.unique(y_true)) <= 2
+    else:
+        binary = len(labels) <=2
 
     if binary:
         # Compute confusion matrix for binary classification
@@ -14,7 +17,7 @@ def negative_predictive_value(y_true, y_pred, average='raise'):
         if average == 'raise':
             raise ValueError("Multiclass detected, but averaging method not defined.")
         # Compute confusion matrix for multiclass classification
-        cm = confusion_matrix(y_true, y_pred)
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
 
         # Compute true negatives and negatives per class
         true_negatives = np.diag(cm)
@@ -37,9 +40,12 @@ def negative_predictive_value(y_true, y_pred, average='raise'):
             raise ValueError("Invalid average type. Must be either 'macro' or 'micro'.")
 
 
-def specificity(y_true, y_pred, average='raise'):
+def specificity(y_true, y_pred, average='raise', labels=None):
     # Check if it's a binary classification case
-    binary = len(np.unique(y_true)) <= 2
+    if labels is None:
+        binary = len(np.unique(y_true)) <= 2
+    else:
+        binary = len(labels) <= 2
 
     if binary:
         # Compute confusion matrix for binary classification
@@ -49,7 +55,7 @@ def specificity(y_true, y_pred, average='raise'):
         if average == 'raise':
             raise ValueError("Multiclass detected, but averaging method not defined.")
         # Compute confusion matrix for multiclass classification
-        cm = confusion_matrix(y_true, y_pred)
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
 
         # Compute true negatives and positives per class
         true_negatives = np.diag(cm)
@@ -70,3 +76,4 @@ def specificity(y_true, y_pred, average='raise'):
             return overall_true_negatives / (overall_true_negatives + overall_positives)
         else:
             raise ValueError("Invalid average type. Must be either 'macro' or 'micro'.")
+

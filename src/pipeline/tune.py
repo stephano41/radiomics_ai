@@ -88,7 +88,7 @@ def get_data(data_dir, image_stem='image', mask_stem='mask') -> ImageDataset:
     return image_dataset
 
 
-def get_feature_dataset(image_dataset, label_csv_path, target_column: str, extraction_params="mr_default.yml",
+def get_feature_dataset( target_column: str, image_dataset=None, label_csv_path=None, extraction_params="mr_default.yml",
                         n_jobs=None, label_csv_encoding=None, feature_df_merger=None,
                         existing_feature_df=None) -> FeatureDataset:
     if existing_feature_df is None:

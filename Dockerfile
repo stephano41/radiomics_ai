@@ -12,7 +12,7 @@ COPY requirements.txt .
 
 RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt
 #RUN pip install -r requirements.txt
-RUN pip install --no-deps shap==0.42
+RUN pip install --no-deps shap==0.42 pandas==1.4.3
 
 COPY . .
 
