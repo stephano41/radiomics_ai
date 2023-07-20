@@ -3,10 +3,10 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import get_scorer, make_scorer, roc_auc_score
+from sklearn.metrics import get_scorer, make_scorer
 from sklearn.metrics._scorer import _ThresholdScorer, _ProbaScorer
 
-from src.metrics import specificity, negative_predictive_value
+from src.metrics import specificity, negative_predictive_value, roc_auc
 
 
 class Scorer:
@@ -21,8 +21,8 @@ class Scorer:
                             'precision_macro': get_scorer('precision_macro'),
                             'negative_predictive_value_micro': make_scorer(negative_predictive_value, average='micro', labels=labels),
                             'negative_predictive_value_macro': make_scorer(negative_predictive_value, average='macro', labels=labels),
-                            'roc_auc_ovr': make_scorer(roc_auc_score, average='macro', multi_class='ovr', labels=labels, needs_proba=True),
-                            'roc_auc_ovo': make_scorer(roc_auc_score, average='macro', multi_class='ovo', labels=labels, needs_proba=True)
+                            'roc_auc_ovr': make_scorer(roc_auc, average='macro', multi_class='ovr', labels=labels, needs_proba=True),
+                            'roc_auc_ovo': make_scorer(roc_auc, average='macro', multi_class='ovo', labels=labels, needs_proba=True)
                             }
         else:
             self._scores = {'recall': get_scorer('recall'),

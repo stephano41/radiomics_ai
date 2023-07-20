@@ -9,7 +9,7 @@ import logging
 from optuna.trial import Trial
 import numpy as np
 from typing import Sequence
-from sklearn.metrics import roc_auc_score
+from src.metrics import roc_auc
 
 
 log = logging.getLogger(__name__)
@@ -28,18 +28,19 @@ class Trainer(OrigTrainer):
         self.multi_class = multi_class
         # self.num_classes = num_classes
 
-        self.auc_scorer = partial(roc_auc_score, average=average, multi_class=self.multi_class, labels=labels)
+        # self.auc_scorer = partial(roc_auc_score, average=average, multi_class=self.multi_class, labels=labels)
+        self.get_auc = partial(roc_auc, average=average, multi_class=self.multi_class, labels=labels)
         super().__init__(dataset, models, result_dir)
 
-    def get_auc(self, y_true, y_pred):
-        try:
-            auc = self.auc_scorer(y_true, y_pred)
-        except ValueError as e:
-            if 'Only one class present' not in str(e):
-                raise ValueError(e)
-            log.error("Only one class present in y_true. ROC AUC score is not defined in that case")
-            auc = np.nan
-        return auc
+    # def get_auc(self, y_true, y_pred):
+    #     try:
+    #         auc = self.auc_scorer(y_true, y_pred)
+    #     except ValueError as e:
+    #         if 'Only one class present' not in str(e):
+    #             raise ValueError(e)
+    #         log.error("Only one class present in y_true. ROC AUC score is not defined in that case")
+    #         auc = np.nan
+    #     return auc
 
     # def run(
     #     self,

@@ -1,5 +1,8 @@
+import logging
+
 import numpy as np
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_auc_score
+log = logging.getLogger(__name__)
 
 
 def negative_predictive_value(y_true, y_pred, average='raise', labels=None):
@@ -77,3 +80,13 @@ def specificity(y_true, y_pred, average='raise', labels=None):
         else:
             raise ValueError("Invalid average type. Must be either 'macro' or 'micro'.")
 
+
+def roc_auc(y_true, y_pred, average='macro', multi_class='raise', labels=None):
+    try:
+        auc = roc_auc_score(y_true, y_pred, average=average, multi_class=multi_class, labels=labels)
+    except ValueError as e:
+        if 'Only one class present' not in str(e):
+            raise ValueError(e)
+        log.error("Only one class present in y_true. ROC AUC score is not defined in that case")
+        auc = np.nan
+    return auc
