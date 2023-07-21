@@ -50,21 +50,21 @@ def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632', prepro
     if preprocessor is None:
         preprocessor = DummyPreprocessor()
 
-    model.fit(*(preprocessor.fit_transform(X[train_idx], Y[train_idx])))
+    model.fit(X[train_idx], Y[train_idx])
 
-    test_acc = scoring_func(model, preprocessor.transform(X[test_idx]), Y[test_idx])
+    test_acc = scoring_func(model, X[test_idx], Y[test_idx])
     test_err = 1 - test_acc
-
+    print(test_err)
     # training error on the whole training set as mentioned in the
     # previous comment above
-    train_acc = scoring_func(model, preprocessor.transform(X), Y)
+    train_acc = scoring_func(model, X, Y)
     train_err = 1 - train_acc
 
     if method == "oob":
         acc = test_acc
     else:
         if method == ".632+":
-            gamma = 1 - scoring_func.no_information_rate(model, preprocessor.transform(X), Y)
+            gamma = 1 - scoring_func.no_information_rate(model, X, Y)
             R = (test_err - train_err) / (gamma - train_err)
             weight = 0.632 / (1 - 0.368 * R)
 

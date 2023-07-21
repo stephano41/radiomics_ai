@@ -8,6 +8,8 @@ import pandas as pd
 import yaml
 from autorad.models import MLClassifier
 from autorad.preprocessing import run_auto_preprocessing
+from sklearn.pipeline import Pipeline
+
 from src.evaluation import bootstrap
 
 from src.pipeline.utils import get_data, get_feature_dataset
@@ -69,8 +71,11 @@ def draft_pipeline(config):
     #                                                 preprocessor=artifacts["preprocessor"],
     #                                                 split="test")
     # print(result_df)
-    logger.info(bootstrap(artifacts['model'], feature_dataset.X.to_numpy(), feature_dataset.y.to_numpy(), iters=100, num_cpu=4,
-                    labels=[0, 1, 2], method='.632+', preprocessor=artifacts["preprocessor"].pipeline))
+    pipeline: Pipeline = artifacts["preprocessor"].pipeline
+    pipeline.steps.append(['estimator', artifacts['model']])
+
+    logger.info(bootstrap(pipeline, feature_dataset.X.to_numpy(), feature_dataset.y.to_numpy(), iters=20, num_cpu=4,
+                    labels=[0, 1, 2], method='.632+'))
 
 
 def wiki_sarcoma_df_merger(label_df: pd.DataFrame, feature_df: pd.DataFrame) -> pd.DataFrame:
