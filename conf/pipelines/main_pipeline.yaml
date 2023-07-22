@@ -43,3 +43,11 @@ preprocessing:
 optimizer:
   n_trials: 10
 
+bootstrap:
+    iters: 20
+    num_cpu: ${n_cpu}
+    labels: ${labels}
+    method: .632+
+
+
+

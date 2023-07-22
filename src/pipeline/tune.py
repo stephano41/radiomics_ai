@@ -66,11 +66,6 @@ def draft_pipeline(config):
     # start evaluation
     artifacts = get_artifacts_from_last_run(experiment_name)
 
-    # result_df = evaluation.evaluate_feature_dataset(dataset=feature_dataset,
-    #                                                 model=artifacts['model'],
-    #                                                 preprocessor=artifacts["preprocessor"],
-    #                                                 split="test")
-    # print(result_df)
     pipeline: Pipeline = artifacts["preprocessor"].pipeline
     pipeline.steps.append(['estimator', artifacts['model']])
 

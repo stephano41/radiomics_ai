@@ -6,6 +6,7 @@ defaults:
   - override hydra/job_logging: custom
 
 output_root: ./outputs
+n_cpu: 4
 
 
 

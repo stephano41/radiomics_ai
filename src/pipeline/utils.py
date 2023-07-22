@@ -4,7 +4,7 @@ from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
 from hydra.utils import instantiate
 
 from src.dataset import ImageDataset
-from src.feature_extraction import FeatureExtractor
+from autorad.feature_extraction import FeatureExtractor
 
 
 def get_data(data_dir, image_stem='image', mask_stem='mask') -> ImageDataset:

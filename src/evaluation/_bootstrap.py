@@ -1,5 +1,4 @@
 from functools import partial
-from itertools import product
 from multiprocessing.pool import Pool
 
 import pandas as pd
@@ -14,7 +13,7 @@ from src.metrics import Scorer
 # metrics to include: positive predictive value, negative predictive, sensitivity, specificity, AUC
 
 
-def bootstrap(model, X, Y, preprocessor=None, iters: int = 500, alpha: float = 0.95, num_cpu: int = 2, method: str = '.632',
+def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int = 2, method: str = '.632',
               num_gpu=0, labels=None):
     if method not in [".632", ".632+", "oob"]:
         raise ValueError(f"invalid bootstrap method {method}")
@@ -27,34 +26,30 @@ def bootstrap(model, X, Y, preprocessor=None, iters: int = 500, alpha: float = 0
     if num_gpu <= 0:
         # use default python
         partial_bootstrap = partial(_one_bootstrap, model=model, scoring_func=score_func,
-                                    X=X, Y=Y, method=method, preprocessor=preprocessor)
+                                    X=X, Y=Y, method=method)
         with Pool(num_cpu) as pool:
             for score in tqdm(pool.imap_unordered(partial_bootstrap, oob.split(X)), total=oob.n_splits):
                 scores.append(score)
     else:
         remote_bootstrap = ray.remote(num_gpus=num_gpu, max_calls=1)(_one_bootstrap)
-        model_id, X_id, Y_id, score_func_id, method_id, preprocessor_id = ray.put(model), ray.put(X), ray.put(Y), ray.put(
-            score_func), ray.put(method), ray.put(preprocessor)
+        model_id, X_id, Y_id, score_func_id, method_id = ray.put(model), ray.put(X), ray.put(Y), ray.put(
+            score_func), ray.put(method)
         scores = ray.get([remote_bootstrap.remote(idx, model=model_id, scoring_func=score_func_id,
-                                                  X=X_id, Y=Y_id, method=method_id, preprocessor=preprocessor_id) for idx in
+                                                  X=X_id, Y=Y_id, method=method_id) for idx in
                           oob.split(X)])
         ray.shutdown()
 
     return get_ci_each_col(pd.concat(scores, ignore_index=True), alpha)
 
 
-def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632', preprocessor=None):
+def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632'):
     train_idx = idx[0]
     test_idx = idx[1]
-
-    if preprocessor is None:
-        preprocessor = DummyPreprocessor()
-
+    # print('hey')
     model.fit(X[train_idx], Y[train_idx])
 
     test_acc = scoring_func(model, X[test_idx], Y[test_idx])
     test_err = 1 - test_acc
-    print(test_err)
     # training error on the whole training set as mentioned in the
     # previous comment above
     train_acc = scoring_func(model, X, Y)
@@ -91,13 +86,3 @@ def get_ci(data, alpha=0.95):
     upper = min(1.0, np.percentile(data, p))
     return lower, upper
 
-
-class DummyPreprocessor:
-    def __init__(self):
-        pass
-
-    def transform(self, X):
-        return X
-
-    def fit_transform(self, X, y):
-        return X, y

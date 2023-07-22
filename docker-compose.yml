@@ -8,9 +8,10 @@ services:
         volumes:
             - ./outputs/:/opt/project/outputs/
         environment:
-            - AUTORAD_RESULT_DIR=/opt/project/outputs/
+            - AUTORAD_RESULT_DIR=./outputs
             - HYDRA_FULL_ERROR=1
         tty: true
         stdin_open: true
         ports:
             - 8000:8000
+        mem_limit: 8000m
