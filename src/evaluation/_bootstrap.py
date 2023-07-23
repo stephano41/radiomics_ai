@@ -6,7 +6,7 @@ import mlflow
 import pandas as pd
 import ray
 import numpy as np
-from mlxtend.evaluate import BootstrapOutOfBag
+from .stratified_bootstrap import BootstrapGenerator
 from tqdm import tqdm
 
 from src.metrics import Scorer
@@ -20,9 +20,10 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
     if method not in [".632", ".632+", "oob"]:
         raise ValueError(f"invalid bootstrap method {method}")
 
-    oob = BootstrapOutOfBag(n_splits=iters)
+    oob = BootstrapGenerator(n_splits=iters, stratify=True)
 
-    score_func = Scorer(labels)
+    score_func = Scorer(multiclass=len(np.unique(Y)>2),
+                        labels=labels)
     scores = []
 
     if num_gpu <= 0:
@@ -30,7 +31,7 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
         partial_bootstrap = partial(_one_bootstrap, model=model, scoring_func=score_func,
                                     X=X, Y=Y, method=method)
         with Pool(num_cpu) as pool:
-            for score in tqdm(pool.imap_unordered(partial_bootstrap, oob.split(X)), total=oob.n_splits):
+            for score in tqdm(pool.imap_unordered(partial_bootstrap, oob.split(X, Y)), total=oob.n_splits):
                 scores.append(score)
     else:
         remote_bootstrap = ray.remote(num_gpus=num_gpu, max_calls=1)(_one_bootstrap)
@@ -38,7 +39,7 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
             score_func), ray.put(method)
         scores = ray.get([remote_bootstrap.remote(idx, model=model_id, scoring_func=score_func_id,
                                                   X=X_id, Y=Y_id, method=method_id) for idx in
-                          oob.split(X)])
+                          oob.split(X, Y)])
         ray.shutdown()
 
     return get_ci_each_col(pd.concat(scores, ignore_index=True), alpha)
@@ -56,8 +57,6 @@ def log_ci2mlflow(ci_dict: Dict, run_id=None):
         mlflow.log_dict(ci_dict, "confidence_intervals.yaml")
         # log to metrics to display in mlflow
         mlflow.log_metrics(metrics_dict)
-
-
 
 
 def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632'):

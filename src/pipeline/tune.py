@@ -80,3 +80,8 @@ def wiki_sarcoma_df_merger(label_df: pd.DataFrame, feature_df: pd.DataFrame) -> 
         {v: k for k, v in enumerate(merged_feature_df['Grade'].unique())})
 
     return merged_feature_df
+
+# TODO allow registration of images to combine multiple modalities
+# TODO calibration score?
+# TODO get hydra logging to work
+# TODO get pytests to work

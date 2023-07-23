@@ -1,22 +1,13 @@
 import os
 
-from src.pipeline.utils import get_data, get_feature_dataset
+from src.evaluation.stratified_bootstrap import BootstrapGenerator
 
-from src import evaluation
-from src.evaluation import bootstrap
-from src.inference import get_artifacts_from_last_run
-from autorad.config import config
-import mlflow
+stratifiedbootstrap = BootstrapGenerator()
+import numpy as np
+X = np.random.random([50,10])
+y=np.random.randint(0,3, 50)
 
-dataset = get_data(data_dir='./data',
-                   image_stem='image',
-                   mask_stem='mask_GTV_Mass')
-
-feature_dataset = get_feature_dataset(image_dataset=dataset,
-                                      label_csv_path='./example_data/INFOclinical_STS.csv',
-                                      target_column='Grade',
-                                      extraction_params='./conf/radiomic_params/mr_default.yaml',
-                                      n_jobs=-1,
-                                      label_csv_encoding='cp1252',
-                                      feature_df_merger={'_target_': 'src.pipeline.wiki_sarcoma_df_merger'}
-                                      )
+for train_idx, test_idx in stratifiedbootstrap.split(X, y):
+    print(y[train_idx])
+    print(y[test_idx])
+    break
