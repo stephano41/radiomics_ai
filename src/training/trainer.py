@@ -6,11 +6,13 @@ from autorad.models import MLClassifier
 from autorad.training import Trainer as OrigTrainer, train_utils
 import mlflow
 import logging
+
+from autorad.utils import mlflow_utils
 from optuna.trial import Trial
 import numpy as np
 from typing import Sequence
 from src.metrics import roc_auc
-
+from src.preprocessing import Preprocessor
 
 log = logging.getLogger(__name__)
 
@@ -31,45 +33,6 @@ class Trainer(OrigTrainer):
         # self.auc_scorer = partial(roc_auc_score, average=average, multi_class=self.multi_class, labels=labels)
         self.get_auc = partial(roc_auc, average=average, multi_class=self.multi_class, labels=labels)
         super().__init__(dataset, models, result_dir)
-
-    # def get_auc(self, y_true, y_pred):
-    #     try:
-    #         auc = self.auc_scorer(y_true, y_pred)
-    #     except ValueError as e:
-    #         if 'Only one class present' not in str(e):
-    #             raise ValueError(e)
-    #         log.error("Only one class present in y_true. ROC AUC score is not defined in that case")
-    #         auc = np.nan
-    #     return auc
-
-    # def run(
-    #     self,
-    #     auto_preprocess: bool = False,
-    #     experiment_name="model_training",
-    # ):
-    #     """
-    #            Run hyperparameter optimization for all the models.
-    #            """
-    #     mlflow.set_tracking_uri('file:/' + str(self.result_dir))
-    #     if not mlflow.get_experiment_by_name(experiment_name):
-    #         mlflow.create_experiment(experiment_name)
-    #     else:
-    #         log.warning("Running training in existing experiment.")
-    #     mlflow.set_experiment(experiment_name)
-    #     with mlflow.start_run():
-    #         study = self.optimizer.create_study(
-    #             study_name=experiment_name,
-    #         )
-    #
-    #         study.optimize(
-    #             lambda trial: self._objective(trial, auto_preprocess),
-    #             n_trials=self.optimizer.n_trials,
-    #         )
-    #         best_trial = study.best_trial
-    #         self.log_to_mlflow(
-    #             best_trial=best_trial,
-    #             auto_preprocess=auto_preprocess,
-    #         )
 
     def _objective(self, trial: Trial, auto_preprocess=False) -> float:
         """Get params from optuna trial, return the metric."""
@@ -136,3 +99,21 @@ class Trainer(OrigTrainer):
         train_auc = self.get_auc(y_true, y_pred_proba)
         print(mlflow.get_tracking_uri())
         mlflow.log_metric("AUC_train", float(train_auc))
+
+    def save_best_preprocessor(self, best_trial_params: dict):
+        feature_selection = best_trial_params["feature_selection_method"]
+        oversampling = best_trial_params["oversampling_method"]
+        preprocessor = Preprocessor(
+            standardize=True,
+            feature_selection_method=feature_selection,
+            oversampling_method=oversampling,
+        )
+        preprocessor.fit_transform_data(self.dataset.data)
+        mlflow.sklearn.log_model(preprocessor, "preprocessor")
+        if "select" in preprocessor.pipeline.named_steps:
+            selected_features = preprocessor.pipeline[
+                "select"
+            ].selected_features
+            mlflow_utils.log_dict_as_artifact(
+                selected_features, "selected_features"
+            )

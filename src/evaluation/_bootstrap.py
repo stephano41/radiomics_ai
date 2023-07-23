@@ -1,6 +1,8 @@
 from functools import partial
 from multiprocessing.pool import Pool
+from typing import Dict
 
+import mlflow
 import pandas as pd
 import ray
 import numpy as np
@@ -40,6 +42,22 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
         ray.shutdown()
 
     return get_ci_each_col(pd.concat(scores, ignore_index=True), alpha)
+
+
+def log_ci2mlflow(ci_dict: Dict, run_id=None):
+    metrics_dict={}
+
+    for name, (lower, upper) in ci_dict.items():
+        metrics_dict[name + '_ll'] = lower
+        metrics_dict[name + '_ul'] = upper
+
+    with mlflow.start_run(run_id=run_id):
+        # log original confidence interval dict for future presentation
+        mlflow.log_dict(ci_dict, "confidence_intervals.yaml")
+        # log to metrics to display in mlflow
+        mlflow.log_metrics(metrics_dict)
+
+
 
 
 def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632'):

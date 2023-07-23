@@ -24,7 +24,9 @@ feature_dataset:
 
 split:
   existing_split:
-  method: train_with_cross_validation_test
+  method: train_with_cross_validation
+  split_on:
+  n_splits: 5
 
 models:
   - Random Forest
@@ -48,6 +50,7 @@ bootstrap:
     num_cpu: ${n_cpu}
     labels: ${labels}
     method: .632+
+    alpha: 0.95
 
 
 

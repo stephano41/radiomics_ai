@@ -1,9 +1,9 @@
 import pandas as pd
-from autorad.data import FeatureDataset
+import yaml
 from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
 from hydra.utils import instantiate
 
-from src.dataset import ImageDataset
+from src.dataset import ImageDataset, FeatureDataset
 from autorad.feature_extraction import FeatureExtractor
 
 
@@ -38,3 +38,16 @@ def get_feature_dataset(target_column: str, image_dataset=None, label_csv_path=N
         return FeatureDataset(pd.read_csv(existing_feature_df),
                               target=target_column,
                               ID_colname='ID')
+
+
+def split_feature_dataset(feature_dataset: FeatureDataset, existing_split=None, save_path=None,
+                          method='train_with_cross_validation_test', split_on=None, test_size=0.2, *args, **kwargs
+                          ):
+    if existing_split is None:
+        feature_dataset.split(save_path=save_path, method=method, split_on=split_on, test_size=test_size, *args,
+                              **kwargs)
+    else:
+        with open(existing_split, 'r') as f:
+            feature_dataset.load_splits((yaml.safe_load(f)))
+
+    return feature_dataset

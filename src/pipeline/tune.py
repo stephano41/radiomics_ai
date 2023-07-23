@@ -5,16 +5,13 @@ import logging
 
 import hydra
 import pandas as pd
-import yaml
 from autorad.models import MLClassifier
-from autorad.preprocessing import run_auto_preprocessing
-from sklearn.pipeline import Pipeline
 
-from src.evaluation import bootstrap
-
-from src.pipeline.utils import get_data, get_feature_dataset
+from src.evaluation import bootstrap, log_ci2mlflow
+from src.pipeline.utils import get_data, get_feature_dataset, split_feature_dataset
 from src.training import Trainer
-from src.inference import get_artifacts_from_last_run
+from src.inference import get_pipeline_from_last_run, get_last_run_from_experiment_name
+from src.preprocessing import run_auto_preprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +27,9 @@ def draft_pipeline(config):
     # save the feature_dataset
     feature_dataset.df.to_csv(os.path.join(output_dir, 'extracted_features.csv'))
 
-    if config.split.existing_split is None:
-        feature_dataset.split(method=config.split.method, save_path=os.path.join(output_dir, 'splits.yml'))
-    else:
-        with open(config.split.existing_split, 'r') as f:
-            feature_dataset.load_splits((yaml.safe_load(f)))
+    feature_dataset = split_feature_dataset(feature_dataset,
+                                            save_path=os.path.join(output_dir, 'splits.yml'),
+                                            **config.split)
 
     # initialise models
     if config.models is None:
@@ -64,13 +59,14 @@ def draft_pipeline(config):
     trainer.run(auto_preprocess=True, experiment_name=experiment_name)
 
     # start evaluation
-    artifacts = get_artifacts_from_last_run(experiment_name)
+    pipeline = get_pipeline_from_last_run(experiment_name)
 
-    pipeline: Pipeline = artifacts["preprocessor"].pipeline
-    pipeline.steps.append(['estimator', artifacts['model']])
+    confidence_interval = bootstrap(pipeline, feature_dataset.X.to_numpy(), feature_dataset.y.to_numpy(),
+                                    **config.bootstrap)
 
-    logger.info(bootstrap(pipeline, feature_dataset.X.to_numpy(), feature_dataset.y.to_numpy(), iters=20, num_cpu=4,
-                    labels=[0, 1, 2], method='.632+'))
+    logger.info(confidence_interval)
+    log_ci2mlflow(confidence_interval,
+                  run_id=get_last_run_from_experiment_name(experiment_name).run_id)
 
 
 def wiki_sarcoma_df_merger(label_df: pd.DataFrame, feature_df: pd.DataFrame) -> pd.DataFrame:
