@@ -6,7 +6,7 @@ services:
             context: .
             dockerfile: Dockerfile
         volumes:
-            - ./outputs/:/opt/project/outputs/
+            - ./:/opt/project/
         environment:
             - AUTORAD_RESULT_DIR=./outputs
             - HYDRA_FULL_ERROR=1

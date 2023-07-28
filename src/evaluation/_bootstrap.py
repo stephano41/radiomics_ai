@@ -16,11 +16,11 @@ from src.metrics import Scorer
 
 
 def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int = 2, method: str = '.632',
-              num_gpu=0, labels=None):
+              num_gpu=0, labels=None, stratify=False):
     if method not in [".632", ".632+", "oob"]:
         raise ValueError(f"invalid bootstrap method {method}")
 
-    oob = BootstrapGenerator(n_splits=iters, stratify=True)
+    oob = BootstrapGenerator(n_splits=iters, stratify=stratify)
 
     score_func = Scorer(multiclass=len(np.unique(Y)>2),
                         labels=labels)

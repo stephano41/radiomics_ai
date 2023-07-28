@@ -10,12 +10,12 @@ labels: [0,1,2]
 # labels:
 
 dataset:
-  data_dir: ./data
+  data_dir: ./data/wiki_sarcoma
   image_stem: image
   mask_stem: mask_GTV_Mass
 
 feature_dataset:
-  label_csv_path: example_data/INFOclinical_STS.csv
+  label_csv_path: data/wiki_sarcoma_meta.csv
   target_column: Grade
   extraction_params: ./conf/radiomic_params/mr_default.yaml
   n_jobs: -1
@@ -52,6 +52,7 @@ bootstrap:
     labels: ${labels}
     method: .632+
     alpha: 0.95
+    stratify: True
 
 
 
