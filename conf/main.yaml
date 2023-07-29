@@ -1,5 +1,6 @@
 defaults:
   - pipelines: main_pipeline
+  - experiments: meningioma
   - hydra/run/dir: job_timestamp
   - _self_
   - optional local_env: env

@@ -1,10 +1,13 @@
 import pandas as pd
 import yaml
+from autorad.utils import extraction_utils
 from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
 from hydra.utils import instantiate
 
 from src.dataset import ImageDataset, FeatureDataset
 from autorad.feature_extraction import FeatureExtractor
+
+from src.utils.preprocessing import get_multi_paths_with_separate_folder_per_case
 
 
 def get_data(data_dir, image_stem='image', mask_stem='mask') -> ImageDataset:
@@ -21,7 +24,7 @@ def get_data(data_dir, image_stem='image', mask_stem='mask') -> ImageDataset:
 
 
 def get_feature_dataset(target_column: str, image_dataset=None, label_csv_path=None, extraction_params="mr_default.yml",
-                        n_jobs=None, label_csv_encoding=None, feature_df_merger=None,
+                        n_jobs=-1, label_csv_encoding=None, feature_df_merger=None,
                         existing_feature_df=None) -> FeatureDataset:
     if existing_feature_df is None:
         extractor = FeatureExtractor(image_dataset, extraction_params=extraction_params, n_jobs=n_jobs)
@@ -38,6 +41,50 @@ def get_feature_dataset(target_column: str, image_dataset=None, label_csv_path=N
         return FeatureDataset(pd.read_csv(existing_feature_df),
                               target=target_column,
                               ID_colname='ID')
+
+
+def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, image_stems: [str] = ['image'],
+                                   mask_stem='mask', label_csv_encoding=None,
+                                   extraction_params="mr_default.yml", n_jobs=-1,
+                                   feature_df_merger=None, existing_feature_df=None) -> FeatureDataset:
+    if existing_feature_df is not None:
+        return FeatureDataset(pd.read_csv(existing_feature_df), target=target_column, ID_colname='ID')
+
+    paths_df = get_multi_paths_with_separate_folder_per_case(data_dir,
+                                                             relative=True,
+                                                             image_stems=image_stems,
+                                                             mask_stem=mask_stem
+                                                             )
+
+    exclusion_columns = ['ID', 'segmentation_path']
+
+    feature_dfs = []
+    for image_stem in image_stems:
+        image_dataset = ImageDataset(paths_df,
+                                     ID_colname='ID',
+                                     image_colname=f'image_{image_stem}',
+                                     root_dir=data_dir)
+
+        extractor = FeatureExtractor(image_dataset, extraction_params=extraction_params, n_jobs=n_jobs)
+
+        feature_df = extractor.run()
+
+        feature_df = feature_df.rename(columns=
+            {feature_name: f'{feature_name}_{image_stem}' for feature_name in feature_df.columns.tolist() if
+             feature_name not in exclusion_columns})
+
+        feature_dfs.append(feature_df)
+
+    # feature_dfs.insert(0, feature_df[exclusion_columns])
+    df = pd.concat(feature_dfs, axis=1)
+
+    all_feature_df = df.loc[:, ~df.columns.duplicated()]
+
+    label_df = pd.read_csv(label_csv_path, encoding=label_csv_encoding)
+
+    merged_feature_df = instantiate(feature_df_merger, label_df=label_df, feature_df=all_feature_df)
+
+    return FeatureDataset(merged_feature_df, target=target_column, ID_colname='ID')
 
 
 def split_feature_dataset(feature_dataset: FeatureDataset, existing_split=None, save_path=None,

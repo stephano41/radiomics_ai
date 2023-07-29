@@ -10,6 +10,9 @@ from multiprocessing import Pool
 
 import os
 
+import src.pipeline.tune
+from src.pipeline.utils import get_multimodal_feature_dataset
+
 
 def process_patient(patient_info):
     patient_src, dest_patient_folder = patient_info
@@ -232,7 +235,8 @@ def register_patients(data_dir, static_stem, moving_stem, output_stem='warped.ni
 
     # Use multiprocessing.Pool to parallelize the registration process
     with multiprocessing.Pool(n_cpu) as pool:
-        pool.starmap(_register_patient, [(folder, static_stem, moving_stem, transform_method, output_stem) for folder in patient_folders])
+        pool.starmap(_register_patient,
+                     [(folder, static_stem, moving_stem, transform_method, output_stem) for folder in patient_folders])
 
 
 def _register_patient(patient_folder, static_stem, moving_stem, transform_method, output_stem='warped.nii'):
@@ -251,8 +255,13 @@ def _register_patient(patient_folder, static_stem, moving_stem, transform_method
 
 
 if __name__ == '__main__':
-    register_patients('./data/meningioma_data', static_stem='t1ce.nii.gz',
-                      moving_stem='ADC.nii',
-                      output_stem='registered_adc.nii',
-                      transform_method='rigid',
-                      n_cpu=1)
+    feature_dataset = get_multimodal_feature_dataset('./data/meningioma_data',
+                                                     './data/meningioma_meta.csv',
+                                                     target_column='Grade',
+                                                     image_stems=['registered_adc', 't2', 'flair', 't1', 't1ce'],
+                                                     mask_stem='mask',
+                                                     extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
+                                                     feature_df_merger={
+                                                         '_target_': 'src.pipeline.tune.meningioma_df_merger'},
+                                                     n_jobs=5)
+    feature_dataset.df.to_csv('./outputs/meningioma_feature_dataset.csv')

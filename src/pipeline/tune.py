@@ -8,7 +8,7 @@ import pandas as pd
 from autorad.models import MLClassifier
 
 from src.evaluation import bootstrap, log_ci2mlflow
-from src.pipeline.utils import get_data, get_feature_dataset, split_feature_dataset
+from src.pipeline.utils import get_data, get_feature_dataset, split_feature_dataset, get_multimodal_feature_dataset
 from src.training import Trainer
 from src.inference import get_pipeline_from_last_run, get_last_run_from_experiment_name
 from src.preprocessing import run_auto_preprocessing
@@ -18,10 +18,7 @@ logger = logging.getLogger(__name__)
 
 def draft_pipeline(config):
     # setup dataset, extract features, split the data
-    dataset = get_data(**config.dataset)
-
-    feature_dataset = get_feature_dataset(image_dataset=dataset,
-                                          **config.feature_dataset)
+    feature_dataset = get_multimodal_feature_dataset(**config.feature_dataset)
 
     output_dir = hydra.utils.HydraConfig.get().run.dir
     # save the feature_dataset
@@ -85,3 +82,13 @@ def wiki_sarcoma_df_merger(label_df: pd.DataFrame, feature_df: pd.DataFrame) -> 
 # TODO calibration score?
 # TODO get hydra logging to work
 # TODO get pytests to work
+
+
+def meningioma_df_merger(label_df: pd.DataFrame, feature_df: pd.DataFrame) -> pd.DataFrame:
+    merged_feature_df = feature_df.merge(label_df,
+                                         left_on='ID',
+                                         right_on="Patient_ID",
+                                         how='left')
+    merged_feature_df = merged_feature_df[merged_feature_df['Grade'].notna()]
+
+    return merged_feature_df

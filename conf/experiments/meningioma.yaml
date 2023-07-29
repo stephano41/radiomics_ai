@@ -1,0 +1,17 @@
+# @package _global_
+name: meningioma
+labels: [0,1]
+
+feature_dataset:
+    data_dir: ./data/meningioma_data
+    image_stems: ['registered_adc', 't2', 'flair', 't1', 't1ce']
+    target_column: Grade
+    label_csv_path: ./data/meningioma_meta.csv
+    extraction_params: ./conf/radiomic_params/meningioma_mr.yaml
+    feature_df_merger: {_target_: src.pipeline.tune.meningioma_df_merger}
+    label_csv_encoding: None
+#     existing_feature_df: ./outputs/meningioma_feature_dataset.csv
+
+bootstrap:
+    iters: 20
+
