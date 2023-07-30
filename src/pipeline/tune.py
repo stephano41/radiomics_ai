@@ -5,13 +5,13 @@ import logging
 
 import hydra
 import pandas as pd
-from autorad.models import MLClassifier
 
 from src.evaluation import bootstrap, log_ci2mlflow
 from src.pipeline.utils import get_data, get_feature_dataset, split_feature_dataset, get_multimodal_feature_dataset
 from src.training import Trainer
 from src.inference import get_pipeline_from_last_run, get_last_run_from_experiment_name
 from src.preprocessing import run_auto_preprocessing
+from src.models import MLClassifier
 
 logger = logging.getLogger(__name__)
 

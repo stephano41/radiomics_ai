@@ -82,6 +82,10 @@ def specificity(y_true, y_pred, average='raise', labels=None):
 
 
 def roc_auc(y_true, y_pred, average='macro', multi_class='raise', labels=None):
+    if len(y_pred.shape) >=2:
+        if y_pred.shape[1] <= 2:
+            y_pred = y_pred[:, 1]
+
     try:
         auc = roc_auc_score(y_true, y_pred, average=average, multi_class=multi_class, labels=labels)
     except ValueError as e:

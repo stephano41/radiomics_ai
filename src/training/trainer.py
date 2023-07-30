@@ -63,12 +63,7 @@ class Trainer(OrigTrainer):
                 log.error(f"Training {model.name} failed.")
                 return np.nan
 
-            if self.multi_class == 'raise':
-                y_pred = model.predict_proba_binary(X_val)
-            elif self.multi_class == 'ovr' or self.multi_class == 'ovo':
-                y_pred = model.predict_proba(X_val)
-            else:
-                raise ValueError(f"multi_class must be 'raise', 'ovr', 'ovo', got {self.multi_class}")
+            y_pred = model.predict_proba(X_val)
 
             try:
                 auc_val = self.get_auc(y_val, y_pred)
@@ -89,12 +84,8 @@ class Trainer(OrigTrainer):
 
     def log_train_auc(self, model: MLClassifier, data: TrainingData):
         y_true = data.y.train
-        if self.multi_class == 'raise':
-            y_pred_proba = model.predict_proba_binary(data.X.train)
-        elif self.multi_class == 'ovr' or self.multi_class == 'ovo':
-            y_pred_proba = model.predict_proba(data.X.train)
-        else:
-            raise ValueError(f"multi_class must be 'raise', 'ovr', 'ovo', got {self.multi_class}")
+
+        y_pred_proba = model.predict_proba(data.X.train)
 
         train_auc = self.get_auc(y_true, y_pred_proba)
         print(mlflow.get_tracking_uri())
