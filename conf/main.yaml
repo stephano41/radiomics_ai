@@ -1,6 +1,6 @@
 defaults:
   - pipelines: main_pipeline
-  - experiments: meningioma
+  - optional experiments: wiki_sarcoma
   - hydra/run/dir: job_timestamp
   - _self_
   - optional local_env: env

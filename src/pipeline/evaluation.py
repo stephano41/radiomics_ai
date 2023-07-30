@@ -4,7 +4,7 @@ from autorad.inference.infer_utils import get_best_run_from_experiment_name
 
 from src.evaluation import bootstrap, log_ci2mlflow
 from src.inference import get_pipeline_from_last_run, get_last_run_from_experiment_name
-from src.inference.infer_utils import get_pipeline_from_best_run
+from src.utils.infer_utils import get_pipeline_from_best_run
 
 logger = logging.getLogger(__name__)
 

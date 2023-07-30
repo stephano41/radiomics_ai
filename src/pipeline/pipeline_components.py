@@ -1,13 +1,11 @@
 import pandas as pd
 import yaml
-from autorad.utils import extraction_utils
+from autorad.feature_extraction import FeatureExtractor
 from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
 from hydra.utils import instantiate
 
 from src.dataset import ImageDataset, FeatureDataset
-from autorad.feature_extraction import FeatureExtractor
-
-from src.utils.preprocessing import get_multi_paths_with_separate_folder_per_case
+from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 
 
 def get_data(data_dir, image_stem='image', mask_stem='mask') -> ImageDataset:

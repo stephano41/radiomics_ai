@@ -3,7 +3,7 @@ import os.path
 from sklearn.neighbors import KNeighborsClassifier
 
 from src.evaluation import bootstrap
-from src.pipeline.utils import get_feature_dataset
+from src.pipeline.pipeline_components import get_feature_dataset
 
 
 def test_bootstrap_632plus():

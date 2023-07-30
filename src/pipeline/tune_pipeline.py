@@ -4,19 +4,18 @@ from pathlib import Path
 import logging
 
 import hydra
-import pandas as pd
 
 from src.evaluation import bootstrap, log_ci2mlflow
-from src.pipeline.utils import get_data, get_feature_dataset, split_feature_dataset, get_multimodal_feature_dataset
+from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 from src.training import Trainer
-from src.inference import get_pipeline_from_last_run, get_last_run_from_experiment_name
 from src.preprocessing import run_auto_preprocessing
 from src.models import MLClassifier
+from src.utils.infer_utils import get_pipeline_from_last_run, get_last_run_from_experiment_name
 
 logger = logging.getLogger(__name__)
 
 
-def draft_pipeline(config):
+def tune_pipeline(config):
     # setup dataset, extract features, split the data
     feature_dataset = get_multimodal_feature_dataset(**config.feature_dataset)
 
@@ -65,30 +64,8 @@ def draft_pipeline(config):
     log_ci2mlflow(confidence_interval,
                   run_id=get_last_run_from_experiment_name(experiment_name).run_id)
 
-
-def wiki_sarcoma_df_merger(label_df: pd.DataFrame, feature_df: pd.DataFrame) -> pd.DataFrame:
-    merged_feature_df = feature_df.merge(label_df,
-                                         left_on="ID",
-                                         right_on="Patient ID",
-                                         how="left")
-    merged_feature_df = merged_feature_df[merged_feature_df['Grade'].notna()]
-
-    merged_feature_df['Grade'] = merged_feature_df['Grade'].map(
-        {v: k for k, v in enumerate(merged_feature_df['Grade'].unique())})
-
-    return merged_feature_df
-
-# TODO allow registration of images to combine multiple modalities
 # TODO calibration score?
 # TODO get hydra logging to work
 # TODO get pytests to work
 
 
-def meningioma_df_merger(label_df: pd.DataFrame, feature_df: pd.DataFrame) -> pd.DataFrame:
-    merged_feature_df = feature_df.merge(label_df,
-                                         left_on='ID',
-                                         right_on="Patient_ID",
-                                         how='left')
-    merged_feature_df = merged_feature_df[merged_feature_df['Grade'].notna()]
-
-    return merged_feature_df

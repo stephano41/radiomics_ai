@@ -1,24 +1,23 @@
 # @package _global_
 
 pipeline:
-  _target_: src.pipeline.draft_pipeline
+  _target_: src.pipeline.tune_pipeline
 
 # ovr doesn't seem to work
-multi_class: ovo
-name: wiki_sarcoma
-labels: [0,1,2]
-# labels:
+multi_class: raise
+name: ???
+labels: Null
 
 feature_dataset:
-  data_dir: ./data/wiki_sarcoma
+  data_dir: ???
   image_stems: [image]
-  mask_stem: mask_GTV_Mass
-  label_csv_path: data/wiki_sarcoma_meta.csv
+  mask_stem: mask
+  label_csv_path: ???
   target_column: Grade
   extraction_params: ./conf/radiomic_params/mr_default.yaml
   n_jobs: ${n_cpu}
-  label_csv_encoding: cp1252
-  feature_df_merger: {_target_: src.pipeline.wiki_sarcoma_df_merger}
+  label_csv_encoding: Null
+  feature_df_merger: Null
   existing_feature_df:
 
 split:
@@ -45,7 +44,7 @@ optimizer:
   n_trials: 10
 
 bootstrap:
-    iters: 300
+    iters: 100
     num_cpu: ${n_cpu}
     labels: ${labels}
     method: .632+
