@@ -1,14 +1,5 @@
-import os
-
-# os.environ['AUTORAD_RESULT_DIR'] = os.path.join(os.getcwd(), 'outputs/mlflow')
-# os.environ['AUTORAD_RESULT_DIR'] = '/app/app/outputs/'
-
-print(f"0. {os.getenv('AUTORAD_RESULT_DIR')}")
 import hydra
 from hydra.utils import instantiate
-
-
-os.environ["HYDRA_FULL_ERROR"] = '1'
 
 
 @hydra.main(config_path='conf', config_name='main', version_base='1.3')

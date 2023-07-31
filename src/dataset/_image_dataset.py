@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 
 class ImageDataset(OrigImageDataset):
-    def plot_examples(self, n: int = 1, window="soft tissues", label=255):
+    def plot_examples(self, n: int = 1, window="soft tissues", label=1):
         if n > len(self.image_paths):
             n = len(self.image_paths)
             log.info(

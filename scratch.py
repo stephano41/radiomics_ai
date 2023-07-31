@@ -102,13 +102,4 @@ def copy_patient_data(src_dir, dest_dir, n_cpu=2):
 
 
 if __name__ == '__main__':
-    feature_dataset = get_multimodal_feature_dataset('./data/meningioma_data',
-                                                     './data/meningioma_meta.csv',
-                                                     target_column='Grade',
-                                                     image_stems=['registered_adc', 't2', 'flair', 't1', 't1ce'],
-                                                     mask_stem='mask',
-                                                     extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
-                                                     feature_df_merger={
-                                                         '_target_': 'src.pipeline.tune.meningioma_df_merger'},
-                                                     n_jobs=5)
-    feature_dataset.df.to_csv('./outputs/meningioma_feature_dataset.csv')
+    print('helloworld')

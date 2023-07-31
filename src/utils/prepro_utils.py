@@ -50,10 +50,3 @@ def get_multi_paths_with_separate_folder_per_case(
     path_df = pd.DataFrame(data_dict)
 
     return path_df
-
-
-def paths_to_df(ids, image_paths, mask_paths):
-    df = pd.DataFrame(
-        {"ID": ids, "image_path": image_paths, "segmentation_path": mask_paths}
-    )
-    return df

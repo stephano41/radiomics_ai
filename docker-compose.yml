@@ -1,6 +1,6 @@
 version: '3'
 services:
-    app:
+    app: &default
         container_name: mri_sarcoma_ai
         build:
             context: .
@@ -15,3 +15,10 @@ services:
         ports:
             - 8000:8000
         mem_limit: 8000m
+
+    jupyter:
+        <<: *default
+        container_name: mri_sarcoma_ai_notebook
+        ports:
+            - 8888:8888
+        command: jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --no-browser
