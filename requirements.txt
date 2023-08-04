@@ -5,7 +5,9 @@ hydra-core
 jupyter
 rich
 Boruta @ git+https://github.com/Jorjatorz/boruta_py_2.git
-# shap==0.42 --install-option='--no-deps'
 mlxtend
 ray
 dipy
+torch
+torchvision
+torchaudio

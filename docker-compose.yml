@@ -1,20 +1,22 @@
 version: '3'
 services:
-    app: &default
-        container_name: mri_sarcoma_ai
+    app:
         build:
             context: .
             dockerfile: Dockerfile
-        volumes:
-            - ./:/opt/project/
-        environment:
-            - AUTORAD_RESULT_DIR=./outputs
-            - HYDRA_FULL_ERROR=1
-        tty: true
-        stdin_open: true
-        ports:
-            - 8000:8000
-        mem_limit: 8000m
+        <<: &default
+            container_name: mri_sarcoma_ai
+            image: mri_sarcoma_ai
+            volumes:
+                - ./:/opt/project/
+            environment:
+                - AUTORAD_RESULT_DIR=./outputs
+                - HYDRA_FULL_ERROR=1
+            tty: true
+            stdin_open: true
+            ports:
+                - 8000:8000
+            mem_limit: 8000m
 
     jupyter:
         <<: *default

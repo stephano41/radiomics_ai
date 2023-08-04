@@ -11,6 +11,39 @@ from src.metrics import specificity, negative_predictive_value, roc_auc
 
 class Scorer:
     def __init__(self, multiclass=False, labels: List = None):
+        """
+        Class for evaluating the performance of classification models using various scoring metrics.
+
+        Parameters:
+            multiclass (bool, optional): If True, the class handles multiclass classification problems.
+                Default is False (binary classification).
+            labels (List, optional): List of unique class labels. Required only for multiclass problems.
+                Default is None.
+
+        Note:
+            This class works with classifiers that provide either 'decision_function' or 'predict_proba' methods
+            for obtaining predicted probabilities.
+
+        Scoring Metrics:
+            - Binary Classification:
+                * recall: Recall (sensitivity)
+                * specificity: Specificity
+                * precision: Precision
+                * negative_predictive_value: Negative Predictive Value
+                * roc_auc: Receiver Operating Characteristic (ROC) Area Under the Curve
+
+            - Multiclass Classification:
+                * recall_micro: Micro-averaged recall
+                * recall_macro: Macro-averaged recall
+                * specificity_micro: Micro-averaged specificity
+                * specificity_macro: Macro-averaged specificity
+                * precision_micro: Micro-averaged precision
+                * precision_macro: Macro-averaged precision
+                * negative_predictive_value_micro: Micro-averaged Negative Predictive Value
+                * negative_predictive_value_macro: Macro-averaged Negative Predictive Value
+                * roc_auc_ovr: One-vs-Rest (OvR) ROC Area Under the Curve
+                * roc_auc_ovo: One-vs-One (OvO) ROC Area Under the Curve
+        """
         self._running_scores = []
 
         if multiclass:
@@ -37,6 +70,9 @@ class Scorer:
                             "roc_auc": get_scorer('roc_auc')}
 
     def score(self, estimator, X, y) -> pd.DataFrame:
+        """
+        Calculate and return the performance scores for the given estimator.
+        """
 
         result = {}
         for name, func in self._scores.items():
@@ -48,6 +84,9 @@ class Scorer:
         return self.score(*args, **kwargs)
 
     def no_information_rate(self, estimator, X, y) -> pd.DataFrame:
+        """
+        Calculate and return the no information rate for each scoring metric.
+        """
         result = {}
         for name, s in self._scores.items():
             y_pred = self.get_output(estimator, X, s)
@@ -58,6 +97,9 @@ class Scorer:
         return pd.DataFrame(result, index=[0])
 
     def get_output(self, estimator, X, scorer) -> pd.DataFrame:
+        """
+        Get the predicted output of the estimator based on the given scorer.
+        """
         if isinstance(scorer, _ThresholdScorer):
             try:
                 y_pred = estimator.decision_function(X)

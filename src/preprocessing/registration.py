@@ -4,6 +4,28 @@ from pathlib import Path
 
 
 def register_patients(data_dir, static_stem, moving_stem, output_stem='warped.nii', transform_method='rigid', n_cpu=2):
+    """
+    Register multiple patients' MRI images using the specified transform method.
+
+    Parameters:
+        data_dir (str or Path): Path to the directory containing patient folders, each containing the MRI images.
+        static_stem (str): Stem of the static (reference) MRI image filename within each patient folder.
+        moving_stem (str): Stem of the moving (image to be registered) MRI image filename within each patient folder.
+        output_stem (str, optional): Stem of the output filename for the registered image. Default is 'warped.nii'.
+        transform_method (str, optional): The registration transform method. Default is 'rigid'.
+            Options include:
+                'com': Center of mass-based affine registration.
+                'sdr': Symmetric diffeomorphic registration.
+                'trans': Translation.
+                'rigid': Rigid body.
+                'rigid_isoscaling': Rigid body + isotropic scaling.
+                'rigid_scaling': Rigid body + scaling.
+                'affine': Full affine including translation, rotation, shearing, and scaling.
+        n_cpu (int, optional): Number of CPU cores to use for parallel processing. Default is 2.
+
+    Returns:
+        None (Prints registration completion status for each patient folder).
+    """
     data_dir = Path(data_dir)
 
     # Get a list of all patient folders

@@ -7,15 +7,15 @@ from src.pipeline.pipeline_components import get_feature_dataset
 
 
 def test_bootstrap_632plus():
-    return _test_bootstrap('.632+')
+    _test_bootstrap('.632+')
 
 
 def test_bootstrap_632():
-    return _test_bootstrap('.632')
+    _test_bootstrap('.632')
 
 
 def test_bootstrap_oob():
-    return _test_bootstrap('oob')
+    _test_bootstrap('oob')
 
 
 def _test_bootstrap(bootstrap_method):

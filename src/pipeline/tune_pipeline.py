@@ -64,8 +64,8 @@ def tune_pipeline(config):
     log_ci2mlflow(confidence_interval,
                   run_id=get_last_run_from_experiment_name(experiment_name).run_id)
 
-# TODO calibration score?
-# TODO get hydra logging to work
-# TODO get pytests to work
+#TODO calibration score?
+#TODO get hydra logging to work
+# TODO get deep learning to work
 
 
