@@ -21,6 +21,8 @@ class VanillaVAE(BaseVAE):
         if hidden_dims is None:
             hidden_dims = [32, 64, 128, 256, 512]
 
+        self.hidden_dims = hidden_dims.copy()
+
         # Build Encoder
         for h_dim in hidden_dims:
             modules.append(
@@ -96,7 +98,7 @@ class VanillaVAE(BaseVAE):
         :return: (Tensor) [B x C x H x W]
         """
         result = self.decoder_input(z)
-        result = result.view(-1, 512, 2, 2)
+        result = result.view(-1, self.hidden_dims[-1], 2, 2)
         result = self.decoder(result)
         result = self.final_layer(result)
         return result
@@ -167,3 +169,25 @@ class VanillaVAE(BaseVAE):
         """
 
         return self.forward(x)[0]
+
+
+class VAELoss(nn.Module):
+    def __init__(self, kld_weight=0.005):
+        super().__init__()
+        self.kld_weight = kld_weight
+
+    def forward(self, *args, **kwargs):
+
+        # args from scorch is ([recons, input, mu, log_var] ,X)
+        recons = args[0][0]
+        input = args[0][1]
+        mu = args[0][2]
+        log_var = args[0][3]
+
+        # kld_weight = kwargs['M_N']  # Account for the minibatch samples from the dataset
+        recons_loss = F.mse_loss(recons, input)
+
+        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim=1), dim=0)
+
+        loss = recons_loss + self.kld_weight * kld_loss
+        return loss

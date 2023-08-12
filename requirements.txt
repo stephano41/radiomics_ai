@@ -11,3 +11,4 @@ dipy
 torch
 torchvision
 torchaudio
+skorch
