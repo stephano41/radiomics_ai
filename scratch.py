@@ -1,6 +1,7 @@
 import pickle
 
 import pandas as pd
+import torch
 import yaml
 from radiomics import imageoperations
 from radiomics.imageoperations import _checkROI
@@ -70,11 +71,13 @@ class MRIDataPreprocessor:
     def __init__(self, dataset: ImageDataset, **settings):
         self.dataset = dataset
 
-        self.label = settings.get('label', 1),
-        self.label_channel = settings.get('label_channel', 0),
-        self.minimumROIDimensions = settings.get('minimumROIDimensions', 1),
-        self.minimumROISize = settings.get('minimumROISize', 0),
-        self.interpolator = settings.get('interpolator', sitk.sitkBSpline),
+        self._settings = settings.copy()
+
+        self.label = settings.get('label', 1)
+        self.label_channel = settings.get('label_channel', 0)
+        # self.minimumROIDimensions = settings.get('minimumROIDimensions', 2)
+        # self.minimumROISize = settings.get('minimumROISize', None)
+        self.interpolator = settings.get('interpolator', sitk.sitkBSpline)
         self.padDistance = settings.get('padDistance', 5)
 
     def load_nifti(self, image_filename, mask_filename):
@@ -85,8 +88,7 @@ class MRIDataPreprocessor:
 
     def crop_to_mask(self, image, mask):
         boundingBox, correctedMask = imageoperations.checkMask(image, mask,
-                                                               minimumROIDimensions=self.minimumROIDimensions,
-                                                               minimumROISize=self.minimumROISize)
+                                                               **self._settings)
         if correctedMask is not None:
             mask = correctedMask
 
@@ -105,7 +107,6 @@ class MRIDataPreprocessor:
 
         maskSpacing = np.array(mask.GetSpacing())
         Nd_mask = len(maskSpacing)
-        maskSize = np.array(mask.GetSize())
 
         spacingRatio = maskSpacing / new_spacing
 
@@ -113,12 +114,9 @@ class MRIDataPreprocessor:
         # round down for lowerbound and up for upperbound to ensure entire segmentation is captured (prevent data loss)
         # Pad with an extra .5 to prevent data loss in case of upsampling. For Ubound this is (-1 + 0.5 = -0.5)
         bbNewLBound = np.floor((bb[:Nd_mask] - 0.5) * spacingRatio - self.padDistance)
-        bbNewUBound = np.ceil((bb[:Nd_mask] + bb[Nd_mask:] - 0.5) * spacingRatio + self.padDistance)
 
         # Ensure resampling is not performed outside bounds of original image
-        maxUbound = np.ceil(maskSize * spacingRatio) - 1
         bbNewLBound = np.where(bbNewLBound < 0, 0, bbNewLBound)
-        # bbNewUBound = np.where(bbNewUBound > maxUbound, maxUbound, bbNewUBound)
 
         bbOriginalLBound = bbNewLBound / spacingRatio
         newOriginIndex = np.array(.5 * (new_spacing - maskSpacing) / maskSpacing)
@@ -166,15 +164,10 @@ class MRIDataPreprocessor:
             images.append(cropped_image)
             masks.append(cropped_mask)
 
+        # adjust smallest_size to be a square otherwise conv layers won't like it
+        smallest_size = [min(smallest_size) for _ in range(len(smallest_size))]
+
         for i in tqdm(range(len(images)), desc="Resampling and Converting to Numpy"):
-            # new_spacing = [curr * orig / new for curr, orig, new in
-            #                zip(images[i].GetSpacing(), images[i].GetSize(), smallest_size)]
-            #
-            # resampled_image, resampled_mask = imageoperations.resampleImage(images[i], masks[i],
-            #                                                                 resampledPixelSpacing=new_spacing,
-            #                                                                 interpolator=self.interpolator,
-            #                                                                 padDistance=self.padDistance,
-            #                                                                 label=self.label)
             resampled_image, resampled_mask = self.resample_image_mask(images[i], masks[i], smallest_size)
 
             assert np.equal(resampled_image.GetSize(),
@@ -186,38 +179,35 @@ class MRIDataPreprocessor:
         return np.array(images), np.array(masks)
 
 
-# data_preprocessor = MRIDataPreprocessor(dataset, interpolator=sitk.sitkNearestNeighbor)
-# processed_data = data_preprocessor.preprocess()
-
+# data_preprocessor = MRIDataPreprocessor(dataset)
+# images, masks = data_preprocessor.preprocess()
+#
 #
 # with open('./outputs/processed_data.pkl', 'wb') as f:
 #     pickle.dump((images, masks), f)
-# with open('./outputs/processed_data.pkl', 'rb') as f:
-#     images, _ = pickle.load(f)
+with open('./outputs/processed_data.pkl', 'rb') as f:
+    images, _ = pickle.load(f)
 
-from sklearn.datasets import load_digits
-import torch
+images = np.expand_dims(images, axis=1)
 
-data = load_digits(n_class=2)
 
-images, target = data['images'], data['target']
-
-images = torch.unsqueeze(torch.tensor(images).type(torch.float32), dim=1)
-
-from skorch.callbacks import PassthroughScoring, PrintLog, EarlyStopping
-from src.models.autoencoder import VanillaVAE
-from src.models.encoder import Encoder, VAELoss
+from skorch.callbacks import EarlyStopping
+from sklearn.pipeline import Pipeline
+from src.models.autoencoder import VanillaVAE, VAELoss
+from src.models.encoder import Encoder
 
 encoder = Encoder(VanillaVAE,
                   module__in_channels=1,
                   module__latent_dim=100,
-                  module__hidden_dims= [32, 64],
+                  module__hidden_dims= [64, 128],
+                  module__finish_size=3,
                   criterion=VAELoss,
-                  callbacks=[
-                    ('early_stop', EarlyStopping(
-                        monitor='valid_loss',
-                        patience=5
-                    ))]
+                  std_dim=(0,2,3,4)
+                  # callbacks=[
+                  #   ('early_stop', EarlyStopping(
+                  #       monitor='valid_loss',
+                  #       patience=5
+                  #   ))]
                   )
 
 encoder.fit(images)
