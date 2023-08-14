@@ -14,7 +14,7 @@ from src.dataset import ImageDataset
 from src.pipeline.pipeline_components import get_data
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
-from pqdm.processes import pqdm
+from src.dataset import DLDataset
 import numpy as np
 
 
@@ -55,7 +55,7 @@ class DeepFeatureExtractor:
         with open(extraction_params, 'r') as yaml_file:
             settings = yaml.safe_load(yaml_file)['settings']
 
-        self.data_preprocessor = MRIDataPreprocessor(dataset, **settings)
+        self.data_preprocessor = DLDataset(dataset, **settings)
 
     def run(self):
         data_x, _ = self.data_preprocessor.preprocess()
@@ -67,147 +67,36 @@ class DeepFeatureExtractor:
 
 
 
-class MRIDataPreprocessor:
-    def __init__(self, dataset: ImageDataset, **settings):
-        self.dataset = dataset
 
-        self._settings = settings.copy()
-
-        self.label = settings.get('label', 1)
-        self.label_channel = settings.get('label_channel', 0)
-        # self.minimumROIDimensions = settings.get('minimumROIDimensions', 2)
-        # self.minimumROISize = settings.get('minimumROISize', None)
-        self.interpolator = settings.get('interpolator', sitk.sitkBSpline)
-        self.padDistance = settings.get('padDistance', 5)
-
-    def load_nifti(self, image_filename, mask_filename):
-        image = sitk.ReadImage(image_filename)
-        mask = imageoperations.getMask(sitk.ReadImage(mask_filename), label=self.label,
-                                       label_channel=self.label_channel)
-        return image, mask
-
-    def crop_to_mask(self, image, mask):
-        boundingBox, correctedMask = imageoperations.checkMask(image, mask,
-                                                               **self._settings)
-        if correctedMask is not None:
-            mask = correctedMask
-
-        if boundingBox is None:
-            raise ValueError('Mask checks failed during pre-crop')
-        cropped_image, cropped_mask = imageoperations.cropToTumorMask(image, mask, boundingBox)
-        return cropped_image, cropped_mask
-
-    def resample_image_mask(self, image, mask, new_size):
-        new_spacing = [curr * orig / new for curr, orig, new in
-                       zip(image.GetSpacing(), image.GetSize(), new_size)]
-
-        bb = _checkROI(image, mask, label=self.label)
-
-        direction = np.array(mask.GetDirection())
-
-        maskSpacing = np.array(mask.GetSpacing())
-        Nd_mask = len(maskSpacing)
-
-        spacingRatio = maskSpacing / new_spacing
-
-        # Determine bounds of cropped volume in terms of new Index coordinate space,
-        # round down for lowerbound and up for upperbound to ensure entire segmentation is captured (prevent data loss)
-        # Pad with an extra .5 to prevent data loss in case of upsampling. For Ubound this is (-1 + 0.5 = -0.5)
-        bbNewLBound = np.floor((bb[:Nd_mask] - 0.5) * spacingRatio - self.padDistance)
-
-        # Ensure resampling is not performed outside bounds of original image
-        bbNewLBound = np.where(bbNewLBound < 0, 0, bbNewLBound)
-
-        bbOriginalLBound = bbNewLBound / spacingRatio
-        newOriginIndex = np.array(.5 * (new_spacing - maskSpacing) / maskSpacing)
-        newCroppedOriginIndex = newOriginIndex + bbOriginalLBound
-        newOrigin = mask.TransformContinuousIndexToPhysicalPoint(newCroppedOriginIndex)
-
-        imagePixelType = image.GetPixelID()
-        maskPixelType = mask.GetPixelID()
-
-        rif = sitk.ResampleImageFilter()
-
-        rif.SetOutputSpacing(new_spacing)
-        rif.SetOutputDirection(direction)
-        rif.SetSize(new_size)
-        rif.SetOutputOrigin(newOrigin)
-
-        rif.SetOutputPixelType(imagePixelType)
-        rif.SetInterpolator(self.interpolator)
-        resampledImageNode = rif.Execute(image)
-
-        rif.SetOutputPixelType(maskPixelType)
-        rif.SetInterpolator(sitk.sitkNearestNeighbor)
-        resampledMaskNode = rif.Execute(mask)
-
-        return resampledImageNode, resampledMaskNode
-
-    def preprocess(self) -> (np.ndarray, np.ndarray):
-        images = []
-        masks = []
-
-        # Load images and masks, crop, resample, and convert to numpy arrays
-        smallest_size = None
-        for image_path, mask_path in tqdm(zip(self.dataset.image_paths, self.dataset.mask_paths),
-                                          total=len(self.dataset.image_paths),
-                                          desc="Processing MRI Data"):
-            image, mask = self.load_nifti(image_path, mask_path)
-
-            cropped_image, cropped_mask = self.crop_to_mask(image, mask)
-
-            if smallest_size is None:
-                smallest_size = cropped_image.GetSize()
-            else:
-                smallest_size = [min(s, c) for s, c in zip(smallest_size, cropped_image.GetSize())]
-
-            images.append(cropped_image)
-            masks.append(cropped_mask)
-
-        # adjust smallest_size to be a square otherwise conv layers won't like it
-        smallest_size = [min(smallest_size) for _ in range(len(smallest_size))]
-
-        for i in tqdm(range(len(images)), desc="Resampling and Converting to Numpy"):
-            resampled_image, resampled_mask = self.resample_image_mask(images[i], masks[i], smallest_size)
-
-            assert np.equal(resampled_image.GetSize(),
-                            smallest_size).all(), f"resampled image {resampled_image.GetSize()}, whereas smallest_size: {smallest_size}"
-
-            images[i] = sitk.GetArrayFromImage(resampled_image)
-            masks[i] = sitk.GetArrayFromImage(resampled_mask)
-
-        return np.array(images), np.array(masks)
-
-
-# data_preprocessor = MRIDataPreprocessor(dataset)
-# images, masks = data_preprocessor.preprocess()
+data_preprocessor = DLDataset(dataset)
+images= data_preprocessor.preprocess()
 #
 #
-# with open('./outputs/processed_data.pkl', 'wb') as f:
-#     pickle.dump((images, masks), f)
-with open('./outputs/processed_data.pkl', 'rb') as f:
-    images, _ = pickle.load(f)
+with open('./outputs/processed_data.pkl', 'wb') as f:
+    pickle.dump((images), f)
+# with open('./outputs/processed_data.pkl', 'rb') as f:
+#     images, _ = pickle.load(f)
 
-images = np.expand_dims(images, axis=1)
-
-
-from skorch.callbacks import EarlyStopping
-from sklearn.pipeline import Pipeline
-from src.models.autoencoder import VanillaVAE, VAELoss
-from src.models.encoder import Encoder
-
-encoder = Encoder(VanillaVAE,
-                  module__in_channels=1,
-                  module__latent_dim=100,
-                  module__hidden_dims= [64, 128],
-                  module__finish_size=3,
-                  criterion=VAELoss,
-                  std_dim=(0,2,3,4)
-                  # callbacks=[
-                  #   ('early_stop', EarlyStopping(
-                  #       monitor='valid_loss',
-                  #       patience=5
-                  #   ))]
-                  )
-
-encoder.fit(images)
+# images = np.expand_dims(images, axis=1)
+#
+#
+# from skorch.callbacks import EarlyStopping
+# from sklearn.pipeline import Pipeline
+# from src.models.autoencoder import VanillaVAE, VAELoss, Encoder
+#
+# encoder = Encoder(VanillaVAE,
+#                   module__in_channels=1,
+#                   module__latent_dim=100,
+#                   module__hidden_dims= [16, 32],
+#                   module__finish_size=3,
+#                   criterion=VAELoss,
+#                   std_dim=(0,2,3,4),
+#                   max_epochs=10,
+#                   # callbacks=[
+#                   #   ('early_stop', EarlyStopping(
+#                   #       monitor='valid_loss',
+#                   #       patience=5
+#                   #   ))]
+#                   )
+#
+# encoder.fit(images)

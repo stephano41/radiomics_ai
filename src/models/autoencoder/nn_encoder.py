@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 import numpy as np
+from sklearn.base import TransformerMixin
 
 from skorch import NeuralNet
 from torch.utils.data import Subset
 
 
-class Encoder(NeuralNet):
+class Encoder(NeuralNet, TransformerMixin):
     def __init__(self, module, standardise=True, std_dim: int | tuple =3, **kwargs):
         self.standardise=standardise
-        self._mean=None
-        self._std = None
+        self._mean=0
+        self._std =1
         self.std_dim = std_dim
 
         super().__init__(module, **kwargs)
 
     def transform(self, X, y=None):
-        mu, log_var = self.module.encode(X)
+        mu, log_var = self.module.encode((X-self._mean)/self._std)
         return self.module.reparameterize(mu, log_var)
 
     def get_split_datasets(self, X, y=None, **fit_params):
@@ -34,3 +35,6 @@ class Encoder(NeuralNet):
             return Subset(standardised_dataset, dataset_train.indices), Subset(standardised_dataset, dataset_valid.indices)
 
         return dataset_train, dataset_valid
+
+    def evaluation_step(self, batch, training=False):
+        return super().evaluation_step((batch-self._mean)/self._std, training)
