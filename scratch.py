@@ -68,12 +68,13 @@ class DeepFeatureExtractor:
 
 
 
-data_preprocessor = DLDataset(dataset)
+data_preprocessor = DLDataset(dataset, n_jobs=5)
 images= data_preprocessor.preprocess()
-#
-#
-with open('./outputs/processed_data.pkl', 'wb') as f:
-    pickle.dump((images), f)
+
+print(images.shape)
+
+# with open('./outputs/processed_data.pkl', 'wb') as f:
+#     pickle.dump((images), f)
 # with open('./outputs/processed_data.pkl', 'rb') as f:
 #     images, _ = pickle.load(f)
 

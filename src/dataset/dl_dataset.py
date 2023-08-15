@@ -4,13 +4,25 @@ from radiomics import imageoperations
 from radiomics.imageoperations import _checkROI
 import numpy as np
 from tqdm import tqdm
+from pqdm.processes import pqdm
+import matplotlib.pyplot as plt
 
 from src.preprocessing import sitk_transform3D, flip_image3D
 
 
 class DLDataset:
-    def __init__(self, dataset: ImageDataset, transform_kwargs=None, **settings):
+    def __init__(self, dataset: ImageDataset, n_jobs=2, transform_kwargs=None, **settings):
+        """
+        Initialize the DLDataset.
+
+        Parameters:
+            dataset (ImageDataset): The input dataset containing image and mask paths.
+            n_jobs (int): Number of parallel jobs for processing.
+            transform_kwargs (dict): Keyword arguments for data augmentation transformations.
+            settings (dict): Other settings including label, label_channel, interpolator, and padDistance.
+        """
         self.dataset = dataset
+        self.n_jobs = n_jobs
 
         self._settings = settings.copy()
 
@@ -95,45 +107,53 @@ class DLDataset:
 
         return resampledImageNode, resampledMaskNode
 
-    def augment_image(self, image, mask):
-        # num_rotations = random.randint(0,3)
-        # TODO augment images
-        pass
+    def preprocess(self) -> np.ndarray:
+        results = pqdm(
+            ({"image_path": val[0],
+              "mask_path": val[1]}
+             for val in zip(self.dataset.image_paths, self.dataset.mask_paths)),
+            self.read_and_crop,
+            n_jobs=self.n_jobs,
+            argument_type='kwargs'
+        )
 
-    def preprocess(self) -> (np.ndarray, np.ndarray):
-        images = []
-        masks = []
+        images = [r[0] for r in results]
+        masks = [r[1] for r in results]
 
-        # Load images and masks, crop, resample, and convert to numpy arrays
-        smallest_size = None
-        for image_path, mask_path in tqdm(zip(self.dataset.image_paths, self.dataset.mask_paths),
-                                          total=len(self.dataset.image_paths),
-                                          desc="Processing MRI Data"):
-            image, mask = self.load_nifti(image_path, mask_path)
-
-            cropped_image, cropped_mask = self.crop_to_mask(image, mask)
-
-            if smallest_size is None:
-                smallest_size = cropped_image.GetSize()
-            else:
-                smallest_size = [min(s, c) for s, c in zip(smallest_size, cropped_image.GetSize())]
-
-            images.append(cropped_image)
-            masks.append(cropped_mask)
+        sizes = np.array([img.GetSize() for img in images])
 
         # adjust smallest_size to be a square otherwise conv layers won't like it
-        smallest_size = [min(smallest_size) for _ in range(len(smallest_size))]
+        smallest_size = [int(np.min(sizes)) for _ in range(sizes.shape[1])]
+
+        generated_images = sum(pqdm(
+            ({"image": val[0],
+              "mask": val[1],
+              "target_size": smallest_size}
+             for val in zip(images, masks)),
+            self.resample_and_augment,
+            n_jobs=self.n_jobs,
+            argument_type='kwargs'
+        ), [])
+
+        return np.array(generated_images)
+
+    def read_and_crop(self, image_path, mask_path):
+        image, mask = self.load_nifti(image_path, mask_path)
+
+        cropped_image, cropped_mask = self.crop_to_mask(image, mask)
+        return cropped_image, cropped_mask
+
+    def resample_and_augment(self, image, mask, target_size):
+        resampled_image, _ = self.resample_image_mask(image, mask, target_size)
 
         generated_images = []
-        for i in tqdm(range(len(images)), desc="Resampling and Converting to Numpy"):
-            resampled_image, _ = self.resample_image_mask(images[i], masks[i], smallest_size)
 
-            assert np.equal(resampled_image.GetSize(),
-                            smallest_size).all(), f"resampled image {resampled_image.GetSize()}, whereas smallest_size: {smallest_size}"
+        assert np.equal(resampled_image.GetSize(),
+                        target_size).all(), f"resampled image {resampled_image.GetSize()}, whereas smallest_size: {target_size}"
 
-            generated_images.append(resampled_image)
+        generated_images.append(resampled_image)
 
-            generated_images.append(flip_image3D(resampled_image))
-            generated_images.extend(sitk_transform3D(resampled_image, **self.transform_kwargs))
+        generated_images.append(flip_image3D(resampled_image))
+        generated_images.extend(sitk_transform3D(resampled_image, **self.transform_kwargs))
 
-        return np.array([sitk.GetArrayFromImage(img) for img in generated_images])
+        return [sitk.GetArrayFromImage(img) for img in generated_images]
