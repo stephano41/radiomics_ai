@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import List
+from typing import List, Tuple
 
 import pandas as pd
 
@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 def get_multi_paths_with_separate_folder_per_case(
     data_dir: PathLike,
-    image_stems: List[str] = ["image"],
+    image_stems: Tuple[str] = ("image"),
     mask_stem: str = "segmentation",
     relative: bool = False,
 ) -> pd.DataFrame:

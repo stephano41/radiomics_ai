@@ -1,21 +1,18 @@
+import os
 import pickle
 
 import pandas as pd
 import torch
 import yaml
-from radiomics import imageoperations
-from radiomics.imageoperations import _checkROI
-from skorch import NeuralNetClassifier
-from skorch.callbacks import PassthroughScoring, PrintLog, EarlyStopping
-from skorch.dataset import ValidSplit
-from tqdm import tqdm
 
 from src.dataset import ImageDataset
-from src.pipeline.pipeline_components import get_data
+from src.pipeline.pipeline_components import get_data, get_multimodal_feature_dataset, split_feature_dataset
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
-from src.dataset import DLDataset
+from src.dataset.dl_dataset import SitkImageProcessor
 import numpy as np
+from src.models.autoencoder import VanillaVAE, VAELoss, Encoder
+from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 
 
 def plot_debug(stk_image):
@@ -24,80 +21,53 @@ def plot_debug(stk_image):
     plt.show()
 
 
-dataset = get_data('./data/meningioma_data', 't1ce', 'mask')
-
-
-class DeepFeatureExtractor:
-    def __init__(self, dataset: ImageDataset, autoencoder=None, extraction_params="CT_Baessler.yaml",
-                 classifier_kwargs=None):
-        if classifier_kwargs is None:
-            classifier_kwargs = {
-                "max_epochs": 10,
-                "callbacks":[
-                    ('train_loss', PassthroughScoring(
-                        name='train_loss',
-                        on_train=True,
-                    )),
-                    ('valid_loss', PassthroughScoring(
-                        name='valid_loss',
-                    )),
-                    ('print_log', PrintLog()),
-                    ('early_stop', EarlyStopping(
-                        monitor='valid_loss',
-                        patience=5
-                    ))
-                ],
-                "train_split": ValidSplit(5)
-            }
-
-        self.model = NeuralNetClassifier(autoencoder, **classifier_kwargs)
-
-        with open(extraction_params, 'r') as yaml_file:
-            settings = yaml.safe_load(yaml_file)['settings']
-
-        self.data_preprocessor = DLDataset(dataset, **settings)
-
-    def run(self):
-        data_x, _ = self.data_preprocessor.preprocess()
-        self.model.fit(data_x, data_x)
-
-        features = self.model.predict(data_x)
-
-        return features
+# dataset = get_data('./data/meningioma_data', 't1ce', 'mask')
+# sitk_images = get_sitk_images(dataset, n_jobs=5)
 
 
 
-
-data_preprocessor = DLDataset(dataset, n_jobs=5)
-images= data_preprocessor.preprocess()
-
-print(images.shape)
-
-# with open('./outputs/processed_data.pkl', 'wb') as f:
-#     pickle.dump((images), f)
-# with open('./outputs/processed_data.pkl', 'rb') as f:
-#     images, _ = pickle.load(f)
-
-# images = np.expand_dims(images, axis=1)
+# setup dataset, extract features, split the data
+# feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_data',
+#                                                  image_stems=('t2', 'flair'),
+#                                                  mask_stem='mask',
+#                                                  target_column='Grade',
+#                                                  label_csv_path='./data/meningioma_meta.csv',
+#                                                  extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
+#                                                  feature_df_merger={'_target_': 'src.pipeline.tune.meningioma_df_merger'},
+#                                                  existing_feature_df= './outputs/meningioma_feature_dataset.csv')
 #
+# feature_dataset = split_feature_dataset(feature_dataset,
+#                                         method='train_with_cross_validation',
+#                                         n_splits=5)
+paths_df = get_multi_paths_with_separate_folder_per_case('./data/meningioma_data',
+                                                         relative=False,
+                                                         image_stems=('t2', 'flair', 'registered_adc', 't1', 't1ce'),
+                                                         mask_stem='mask',
+                                                         )
+
+sitk_processor = SitkImageProcessor('./outputs', paths_df, mask_stem='segmentation_path', image_column_prefix='image_', n_jobs=6)
+
+X = sitk_processor.transform(paths_df.ID)
+
 #
-# from skorch.callbacks import EarlyStopping
-# from sklearn.pipeline import Pipeline
-# from src.models.autoencoder import VanillaVAE, VAELoss, Encoder
-#
-# encoder = Encoder(VanillaVAE,
-#                   module__in_channels=1,
-#                   module__latent_dim=100,
-#                   module__hidden_dims= [16, 32],
-#                   module__finish_size=3,
-#                   criterion=VAELoss,
-#                   std_dim=(0,2,3,4),
-#                   max_epochs=10,
-#                   # callbacks=[
-#                   #   ('early_stop', EarlyStopping(
-#                   #       monitor='valid_loss',
-#                   #       patience=5
-#                   #   ))]
-#                   )
-#
-# encoder.fit(images)
+from skorch.callbacks import EarlyStopping
+from sklearn.pipeline import Pipeline
+
+
+encoder = Encoder(VanillaVAE,
+                  module__in_channels=5,
+                  module__latent_dim=100,
+                  module__hidden_dims= [16, 32, 64],
+                  module__finish_size=2,
+                  criterion=VAELoss,
+                  std_dim=(0,2,3,4),
+                  max_epochs=10,
+                  # dataset=SitkDataset
+                  # callbacks=[
+                  #   ('early_stop', EarlyStopping(
+                  #       monitor='valid_loss',
+                  #       patience=5
+                  #   ))]
+                  )
+
+encoder.fit(X)

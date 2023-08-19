@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import pandas as pd
 import yaml
 from autorad.feature_extraction import FeatureExtractor
@@ -41,7 +43,7 @@ def get_feature_dataset(target_column: str, image_dataset=None, label_csv_path=N
                               ID_colname='ID')
 
 
-def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, image_stems: [str] = ['image'],
+def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, image_stems: Tuple[str] = ('image'),
                                    mask_stem='mask', label_csv_encoding=None,
                                    extraction_params="mr_default.yml", n_jobs=-1,
                                    feature_df_merger=None, existing_feature_df=None) -> FeatureDataset:

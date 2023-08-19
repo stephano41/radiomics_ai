@@ -16,6 +16,7 @@ class VanillaVAE(BaseVAE):
                  **kwargs) -> None:
         super(VanillaVAE, self).__init__()
 
+        self.in_channels = in_channels
         self.latent_dim = latent_dim
         self.finish_size = finish_size
 
@@ -71,7 +72,7 @@ class VanillaVAE(BaseVAE):
                                output_padding=1),
             nn.BatchNorm3d(hidden_dims[-1]),
             nn.LeakyReLU(),
-            nn.Conv3d(hidden_dims[-1], out_channels=3,
+            nn.Conv3d(hidden_dims[-1], out_channels=self.in_channels,
                       kernel_size=3, padding=1),
             nn.Tanh())
 
