@@ -24,8 +24,10 @@ class Encoder(NeuralNet, TransformerMixin):
         super().__init__(module, **kwargs)
 
     def transform(self, X, y=None):
-        mu, log_var = self.module.encode((X - self._mean) / self._std)
-        return self.module.reparameterize(mu, log_var)
+        data_x = (dfsitk2tensor(X) - self._mean) / self._std
+
+        mu, log_var = self.module_.encode(data_x)
+        return self.module_.reparameterize(mu, log_var)
 
     def get_split_datasets(self, X, y=None, **fit_params):
         dataset_train, dataset_valid = super().get_split_datasets(np.zeros(len(X)), y, **fit_params)

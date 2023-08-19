@@ -198,11 +198,11 @@ class SitkImageTransformer:
         return pd.DataFrame(data=generated_images, columns=sitk_images.columns)
 
 
-
 class SitkImageProcessor(BaseEstimator, TransformerMixin):
-    def __init__(self, result_dir, paths_df, id_column='ID', image_column_prefix='image_', mask_stem='mask', n_jobs=2, target_size=(16,16,16), **settings):
+    def __init__(self, result_dir, paths_df, id_column='ID', image_column_prefix='image_', mask_stem='mask', n_jobs=2,
+                 target_size=(16, 16, 16), **settings):
         self.n_jobs = n_jobs
-        self.target_size=target_size
+        self.target_size = target_size
         self.image_column_prefix = image_column_prefix
         self.mask_stem = mask_stem
         self.result_dir = Path(result_dir) / 'processed_sitk.pkl'
@@ -215,7 +215,7 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
         self.interpolator = settings.get('interpolator', sitk.sitkBSpline)
         self.padDistance = settings.get('padDistance', 5)
 
-        self.saved_df=None
+        self.saved_df = None
 
         if not self.result_dir.exists():
             self.saved_df = self.extract_data(paths_df)
@@ -230,12 +230,13 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
         with open(self.result_dir, 'rb') as f:
             self.saved_df = pickle.load(f)
 
-        return self.saved_df.loc[:, self.saved_df.columns != self.id_column].loc[(self.saved_df[self.id_column].isin(X))]
+        return self.saved_df.loc[:, self.saved_df.columns != self.id_column].loc[
+            (self.saved_df[self.id_column].isin(X))]
 
     def extract_data(self, df):
         image_paths = df.loc[:, df.columns.str.startswith(self.image_column_prefix)]
         mask_paths = df.loc[:, df.columns == self.mask_stem]
-        ID_list = df.loc[:, df.columns==self.id_column]
+        ID_list = df.loc[:, df.columns == self.id_column]
 
         X = pqdm(
             ({"image_paths": val[0][1].values,
@@ -248,7 +249,7 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
         )
 
         column_names = pd.Series(df.columns).loc[df.columns.str.startswith(self.image_column_prefix)].values
-        column_names = np.insert(column_names, 0,self.id_column)
+        column_names = np.insert(column_names, 0, self.id_column)
 
         x_df = pd.DataFrame(data=X, columns=column_names)
 
@@ -256,7 +257,6 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
             pickle.dump(x_df, f)
 
         return x_df
-
 
     def read_crop_resample(self, image_paths, mask_path, id):
         resampled_images = [id]
@@ -337,4 +337,3 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
         resampledMaskNode = rif.Execute(mask)
 
         return resampledImageNode, resampledMaskNode
-

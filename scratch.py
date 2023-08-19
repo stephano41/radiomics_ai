@@ -13,6 +13,8 @@ from src.dataset.dl_dataset import SitkImageProcessor
 import numpy as np
 from src.models.autoencoder import VanillaVAE, VAELoss, Encoder
 from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
+from skorch.callbacks import EarlyStopping
+from sklearn.pipeline import Pipeline
 
 
 def plot_debug(stk_image):
@@ -47,13 +49,6 @@ paths_df = get_multi_paths_with_separate_folder_per_case('./data/meningioma_data
 
 sitk_processor = SitkImageProcessor('./outputs', paths_df, mask_stem='segmentation_path', image_column_prefix='image_', n_jobs=6)
 
-X = sitk_processor.transform(paths_df.ID)
-
-#
-from skorch.callbacks import EarlyStopping
-from sklearn.pipeline import Pipeline
-
-
 encoder = Encoder(VanillaVAE,
                   module__in_channels=5,
                   module__latent_dim=100,
@@ -62,12 +57,13 @@ encoder = Encoder(VanillaVAE,
                   criterion=VAELoss,
                   std_dim=(0,2,3,4),
                   max_epochs=10,
-                  # dataset=SitkDataset
-                  # callbacks=[
-                  #   ('early_stop', EarlyStopping(
-                  #       monitor='valid_loss',
-                  #       patience=5
-                  #   ))]
                   )
 
-encoder.fit(X)
+pipe = Pipeline(steps=[
+    ("read_data", sitk_processor),
+    ('encoder', encoder)
+])
+
+result = pipe.fit_transform(paths_df.ID)
+print(result)
+print(result.shape)
