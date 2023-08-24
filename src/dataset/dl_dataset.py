@@ -1,5 +1,7 @@
+import os
 import pickle
 from pathlib import Path
+from typing import Tuple
 
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -13,6 +15,7 @@ import numpy as np
 from pqdm.processes import pqdm
 
 from src.preprocessing import sitk_transform3D, flip_image3D
+from ..utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 
 
 class DLDataset_old:
@@ -199,14 +202,19 @@ class SitkImageTransformer:
 
 
 class SitkImageProcessor(BaseEstimator, TransformerMixin):
-    def __init__(self, result_dir, paths_df, id_column='ID', image_column_prefix='image_', mask_stem='mask', n_jobs=2,
-                 target_size=(16, 16, 16), **settings):
+    def __init__(self, result_dir, data_dir, image_stems: Tuple[str,...]=('image'), mask_stem='mask', n_jobs=2, target_size=(16, 16, 16), **settings):
         self.n_jobs = n_jobs
         self.target_size = target_size
-        self.image_column_prefix = image_column_prefix
+        self.data_dir = data_dir
         self.mask_stem = mask_stem
-        self.result_dir = Path(result_dir) / 'processed_sitk.pkl'
-        self.id_column = id_column
+        self.result_dir = result_dir
+        self.image_stems = image_stems
+        # self.set_output = set_output
+
+        self.paths_df = get_multi_paths_with_separate_folder_per_case(data_dir=data_dir,
+                                                                      image_stems=image_stems,
+                                                                      mask_stem=mask_stem,
+                                                                      relative=False)
 
         self._settings = settings.copy()
 
@@ -217,26 +225,33 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
 
         self.saved_df = None
 
-        if not self.result_dir.exists():
-            self.saved_df = self.extract_data(paths_df)
+        if not self.get_cache_path.exists():
+            self.saved_df = self.extract_data(self.paths_df)
+
+    @property
+    def get_cache_path(self):
+        return Path(self.result_dir) / 'processed_sitk.pkl'
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X, y=None):
         # Expects X as list of id's to get or extract
-        assert self.result_dir.exists(), f"{self.__class__} hasn't been initialised yet"
+        assert self.get_cache_path.exists(), f"{self.__class__} hasn't been initialised yet"
 
-        with open(self.result_dir, 'rb') as f:
+        with open(self.get_cache_path, 'rb') as f:
             self.saved_df = pickle.load(f)
 
-        return self.saved_df.loc[:, self.saved_df.columns != self.id_column].loc[
-            (self.saved_df[self.id_column].isin(X))]
+        return self.saved_df.loc[:, self.saved_df.columns != 'ID'].loc[
+            (self.saved_df['ID'].isin(X))]
 
     def extract_data(self, df):
-        image_paths = df.loc[:, df.columns.str.startswith(self.image_column_prefix)]
-        mask_paths = df.loc[:, df.columns == self.mask_stem]
-        ID_list = df.loc[:, df.columns == self.id_column]
+        print(f"extracting at {self.get_cache_path} cached path")
+        image_column_names = [f"image_{name}" for name in self.image_stems]
+
+        image_paths = df.loc[:, df.columns.isin(image_column_names)]
+        mask_paths = df.loc[:, df.columns == 'segmentation_path']
+        ID_list = df.loc[:, df.columns == 'ID']
 
         X = pqdm(
             ({"image_paths": val[0][1].values,
@@ -248,12 +263,12 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
             argument_type='kwargs'
         )
 
-        column_names = pd.Series(df.columns).loc[df.columns.str.startswith(self.image_column_prefix)].values
-        column_names = np.insert(column_names, 0, self.id_column)
+        # column_names = pd.Series(df.columns).loc[df.columns.str.startswith(self.image_column_prefix)].values
+        # column_names = np.insert(column_names, 0, 'ID')
 
-        x_df = pd.DataFrame(data=X, columns=column_names)
+        x_df = pd.DataFrame(data=X, columns=["ID"] + image_column_names)
 
-        with open(self.result_dir, 'wb') as f:
+        with open(os.path.join(self.get_cache_path), 'wb') as f:
             pickle.dump(x_df, f)
 
         return x_df
@@ -337,3 +352,7 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
         resampledMaskNode = rif.Execute(mask)
 
         return resampledImageNode, resampledMaskNode
+
+    def get_feature_names_out(self):
+        # see https://stackoverflow.com/questions/75026592/how-to-create-pandas-output-for-custom-transformers
+        pass

@@ -3,13 +3,39 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from autorad.config import config
 from autorad.config.type_definitions import PathLike
 from autorad.utils import io, splitting
+import pandas as pd
 
 log = logging.getLogger(__name__)
 
 
 class FeatureDataset(OrigFeatureDataset):
+    def __init__(self,
+                 dataframe: pd.DataFrame,
+                 target: str,
+                 ID_colname: str,
+                 features: Optional[list[str]] = None,
+                 additional_features=[],
+                 meta_columns: list[str] = [],
+                 random_state: int = config.SEED,
+                 ):
+        self.additional_features=additional_features
+
+        super().__init__(dataframe=dataframe,
+                         target=target,
+                         ID_colname=ID_colname,
+                         features=features,
+                         meta_columns=meta_columns,
+                         random_state=random_state
+                         )
+
+    def _init_features(
+        self, features: Optional[list[str]] = None
+    ) -> list[str]:
+        return self.additional_features + super()._init_features(features)
+
     def split(
             self,
             save_path: Optional[PathLike] = None,

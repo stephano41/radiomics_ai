@@ -10,18 +10,21 @@ feature_dataset:
     target_column: Grade
     label_csv_path: ./data/meningioma_meta.csv
     extraction_params: ./conf/radiomic_params/meningioma_mr.yaml
-    feature_df_merger: {_target_: src.pipeline.tune.meningioma_df_merger}
+    feature_df_merger: {_target_: src.pipeline.df_mergers.meningioma_df_merger}
     label_csv_encoding: Null
     existing_feature_df: ./outputs/meningioma_feature_dataset.csv
+    additional_features: ['ID']
 
 bootstrap:
-    iters: 300
+    iters: 100
 
 optimizer:
-  n_trials: 100
+  n_trials: 10
 
 models:
   - Random Forest
   - SVM
   - XGBoost
 
+defaults:
+    - /autoencoder@preprocessing.autoencoder: vae

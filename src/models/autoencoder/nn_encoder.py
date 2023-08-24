@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import SimpleITK as sitk
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.base import TransformerMixin
 
@@ -9,25 +10,46 @@ from skorch import NeuralNet
 from torch.utils.data import Subset
 
 from src.dataset.dl_dataset import SitkImageTransformer
+from src.models.autoencoder import VanillaVAE, VAELoss
 
 
 class Encoder(NeuralNet, TransformerMixin):
-    def __init__(self, module, standardise=True, std_dim: int | tuple = 3, augment_train=True, transform_kwargs=None,
+    def __init__(self, module, standardise=True, std_dim: int | tuple = 3, augment_train=True, transform_kwargs=None, output_format='tensor',
                  **kwargs):
         self.standardise = standardise
+        self.std_dim = tuple(std_dim)
+        self.transform_kwargs = transform_kwargs
+        self.augment_train = augment_train
+        self.output_format = output_format
+
         self._mean = 0
         self._std = 1
-        self.std_dim = std_dim
-
-        self.augment_train = augment_train
         self.image_augmenter = SitkImageTransformer(transform_kwargs)
+
+        if isinstance(module, str):
+            if module.casefold() == 'vanillavae':
+                module=VanillaVAE
+                kwargs["criterion"]=VAELoss
+            else:
+                raise ValueError(f"module name not implemented, got {module}")
+
         super().__init__(module, **kwargs)
 
     def transform(self, X, y=None):
-        data_x = (dfsitk2tensor(X) - self._mean) / self._std
+        with torch.no_grad():
+            data_x = (dfsitk2tensor(X) - self._mean) / self._std
 
-        mu, log_var = self.module_.encode(data_x)
-        return self.module_.reparameterize(mu, log_var)
+            mu, log_var = self.module_.encode(data_x)
+
+            result = self.module_.reparameterize(mu, log_var).detach()
+            if self.output_format == 'tensor':
+                return result
+            elif self.output_format == 'numpy':
+                return result.numpy()
+            elif self.output_format == 'pandas':
+                return pd.DataFrame(result, columns=[f"{type(self.module_).__name__}_dl_feature_{i}" for i in range(result.shape[1])])
+            else:
+                raise ValueError(f"set_output method not implemented, got {self.output_format}")
 
     def get_split_datasets(self, X, y=None, **fit_params):
         dataset_train, dataset_valid = super().get_split_datasets(np.zeros(len(X)), y, **fit_params)
@@ -57,6 +79,10 @@ class Encoder(NeuralNet, TransformerMixin):
 
     def evaluation_step(self, batch, training=False):
         return super().evaluation_step((batch - self._mean) / self._std, training)
+
+    def get_feature_names_out(self):
+        pass
+
 
 
 def dfsitk2tensor(df):

@@ -4,6 +4,7 @@ from pathlib import Path
 import logging
 
 import hydra
+from hydra.utils import instantiate
 
 from src.evaluation import bootstrap, log_ci2mlflow
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset

@@ -1,5 +1,6 @@
 from functools import partial
 
+import joblib
 from autorad.config.type_definitions import PathLike
 from autorad.data import FeatureDataset, TrainingData
 from autorad.models import MLClassifier
@@ -32,7 +33,19 @@ class Trainer(OrigTrainer):
 
         # self.auc_scorer = partial(roc_auc_score, average=average, multi_class=self.multi_class, labels=labels)
         self.get_auc = partial(roc_auc, average=average, multi_class=self.multi_class, labels=labels)
+        self._existing_preprocess_kwargs = None
         super().__init__(dataset, models, result_dir)
+
+
+    def run(
+        self,
+        auto_preprocess: bool = False,
+        experiment_name="model_training",
+    ):
+        if auto_preprocess:
+            _, self._existing_preprocess_kwargs = self.get_preprocessed_pickle()
+        super().run(auto_preprocess, experiment_name)
+
 
     def _objective(self, trial: Trial, auto_preprocess=False) -> float:
         """Get params from optuna trial, return the metric."""
@@ -82,6 +95,29 @@ class Trainer(OrigTrainer):
 
         return auc_val
 
+    def get_best_preprocessed_dataset(self, trial: Trial) -> TrainingData:
+        """ "
+        Get preprocessed dataset with preprocessing method that performed
+        best in the training.
+        """
+        preprocessed, _ = self.get_preprocessed_pickle()
+        feature_selection_method = trial.suggest_categorical(
+            "feature_selection_method", preprocessed.keys()
+        )
+        oversampling_method = trial.suggest_categorical(
+            "oversampling_method",
+            preprocessed[feature_selection_method].keys(),
+        )
+        result = preprocessed[feature_selection_method][oversampling_method]
+
+        return result
+
+    def get_preprocessed_pickle(self):
+        pkl_path = self.result_dir / "preprocessed.pkl"
+        with open(pkl_path, "rb") as f:
+            preprocessed_data, preprocesser_kwargs = joblib.load(f)
+        return preprocessed_data, preprocesser_kwargs
+
     def log_train_auc(self, model: MLClassifier, data: TrainingData):
         y_true = data.y.train
 
@@ -91,14 +127,17 @@ class Trainer(OrigTrainer):
         print(mlflow.get_tracking_uri())
         mlflow.log_metric("AUC_train", float(train_auc))
 
+    # TODO investigate best_trial_params
     def save_best_preprocessor(self, best_trial_params: dict):
         feature_selection = best_trial_params["feature_selection_method"]
         oversampling = best_trial_params["oversampling_method"]
-        preprocessor = Preprocessor(
-            standardize=True,
-            feature_selection_method=feature_selection,
-            oversampling_method=oversampling,
-        )
+        preprocessor_kwargs = self._existing_preprocess_kwargs.copy()
+
+        preprocessor_kwargs.update({
+            'feature_selection_method': feature_selection,
+            'oversampling_method': oversampling
+        })
+        preprocessor = Preprocessor(**preprocessor_kwargs)
         preprocessor.fit_transform_data(self.dataset.data)
         mlflow.sklearn.log_model(preprocessor, "preprocessor")
         if "select" in preprocessor.pipeline.named_steps:
@@ -107,4 +146,8 @@ class Trainer(OrigTrainer):
             ].selected_features
             mlflow_utils.log_dict_as_artifact(
                 selected_features, "selected_features"
+            )
+        if "autoencoder" in preprocessor.pipeline.named_steps:
+            mlflow_utils.log_dict_as_artifact(
+                preprocessor.autoencoder, "autoencoder"
             )

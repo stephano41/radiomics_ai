@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 def get_multi_paths_with_separate_folder_per_case(
     data_dir: PathLike,
-    image_stems: Tuple[str] = ("image"),
+    image_stems: Tuple[str, ...] = ("image"),
     mask_stem: str = "segmentation",
     relative: bool = False,
 ) -> pd.DataFrame:
@@ -77,3 +77,6 @@ def get_multi_paths_with_separate_folder_per_case(
     path_df = pd.DataFrame(data_dict)
 
     return path_df
+
+
+# def create_autoencoder(image_processor_kwargs, )

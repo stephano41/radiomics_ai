@@ -3,6 +3,7 @@ from typing import Tuple
 import pandas as pd
 import yaml
 from autorad.feature_extraction import FeatureExtractor
+from autorad.utils.extraction_utils import filter_pyradiomics_names
 from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
 from hydra.utils import instantiate
 
@@ -43,20 +44,19 @@ def get_feature_dataset(target_column: str, image_dataset=None, label_csv_path=N
                               ID_colname='ID')
 
 
-def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, image_stems: Tuple[str] = ('image'),
-                                   mask_stem='mask', label_csv_encoding=None,
+def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, image_stems: Tuple[str, ...] = ('image'),
+                                   mask_stem='mask', label_csv_encoding=None, additional_features=[],
                                    extraction_params="mr_default.yml", n_jobs=-1,
                                    feature_df_merger=None, existing_feature_df=None) -> FeatureDataset:
     if existing_feature_df is not None:
-        return FeatureDataset(pd.read_csv(existing_feature_df), target=target_column, ID_colname='ID')
+        return FeatureDataset(pd.read_csv(existing_feature_df), target=target_column, ID_colname='ID',
+                              additional_features=additional_features)
 
     paths_df = get_multi_paths_with_separate_folder_per_case(data_dir,
                                                              relative=True,
                                                              image_stems=image_stems,
                                                              mask_stem=mask_stem
                                                              )
-
-    exclusion_columns = ['ID', 'segmentation_path']
 
     feature_dfs = []
     for image_stem in image_stems:
@@ -70,8 +70,7 @@ def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, imag
         feature_df = extractor.run()
 
         feature_df = feature_df.rename(columns=
-            {feature_name: f'{feature_name}_{image_stem}' for feature_name in feature_df.columns.tolist() if
-             feature_name not in exclusion_columns})
+            {feature_name: f'{feature_name}_{image_stem}' for feature_name in filter_pyradiomics_names(feature_df.columns.tolist())})
 
         feature_dfs.append(feature_df)
 
@@ -84,7 +83,7 @@ def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, imag
 
     merged_feature_df = instantiate(feature_df_merger, label_df=label_df, feature_df=all_feature_df)
 
-    return FeatureDataset(merged_feature_df, target=target_column, ID_colname='ID')
+    return FeatureDataset(merged_feature_df, target=target_column, ID_colname='ID', additional_features=additional_features)
 
 
 def split_feature_dataset(feature_dataset: FeatureDataset, existing_split=None, save_path=None,

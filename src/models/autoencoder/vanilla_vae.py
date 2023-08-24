@@ -173,6 +173,10 @@ class VanillaVAE(BaseVAE):
 
         return self.forward(x)[0]
 
+    @property
+    def get_loss_function(self):
+        return VAELoss
+
 
 class VAELoss(nn.Module):
     def __init__(self, kld_weight=0.005):

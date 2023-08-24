@@ -39,6 +39,8 @@ preprocessing:
 #    boruta doesn't seem to work
 #    - boruta
   use_oversampling: False
+  autoencoder:
+  encoder_colname: 'ID'
 
 optimizer:
   n_trials: 10

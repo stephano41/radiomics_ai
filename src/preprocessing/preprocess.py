@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from autorad.preprocessing import Preprocessor as OrigPreprocessor
+import inspect
+from typing import Any
+
+from autorad.feature_selection import create_feature_selector
+from autorad.preprocessing import Preprocessor as OrigPreprocessor, oversample_utils
 import logging
 from pathlib import Path
 
@@ -8,17 +12,25 @@ import joblib
 
 from autorad.config import config
 from autorad.data import TrainingData, TrainingInput, TrainingLabels
+from hydra.utils import instantiate
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+from src.dataset import FeatureDataset
 
 log = logging.getLogger(__name__)
 
 
 def run_auto_preprocessing(
-    data: TrainingData,
-    result_dir: Path,
-    use_oversampling: bool = True,
-    use_feature_selection: bool = True,
-    oversampling_methods: list[str] | None = None,
-    feature_selection_methods: list[str] | None = None,
+        data: TrainingData,
+        result_dir: Path,
+        use_oversampling: bool = True,
+        use_feature_selection: bool = True,
+        oversampling_methods: list[str] | None = None,
+        feature_selection_methods: list[str] | None = None,
+        autoencoder=None,
+        encoder_colname='ID'
 ):
     """Run preprocessing with a variety of feature selection and oversampling methods.
 
@@ -58,6 +70,8 @@ def run_auto_preprocessing(
                 standardize=True,
                 feature_selection_method=selection_method,
                 oversampling_method=oversampling_method,
+                autoencoder=autoencoder,
+                encoder_colname=encoder_colname
             )
             try:
                 preprocessed[selection_method][
@@ -70,10 +84,27 @@ def run_auto_preprocessing(
         if not preprocessed[selection_method]:
             del preprocessed[selection_method]
     with open(Path(result_dir) / "preprocessed.pkl", "wb") as f:
-        joblib.dump(preprocessed, f)
+        joblib.dump((preprocessed, preprocessor.get_params()), f)
 
 
 class Preprocessor(OrigPreprocessor):
+    def __init__(self,
+                 standardize: bool = True,
+                 feature_selection_method: str | None = None,
+                 oversampling_method: str | None = None,
+                 feature_selection_kwargs: dict[str, Any] | None = None,
+                 random_state: int = config.SEED,
+                 autoencoder=None,
+                 encoder_colname='ID'
+                 ):
+        self.autoencoder = autoencoder
+        self.encoder_colname = encoder_colname
+        super().__init__(standardize=standardize,
+                         feature_selection_method=feature_selection_method,
+                         oversampling_method=oversampling_method,
+                         feature_selection_kwargs=feature_selection_kwargs,
+                         random_state=random_state)
+
     def fit_transform(
             self, X: TrainingInput, y: TrainingLabels
     ) -> tuple[TrainingInput, TrainingLabels]:
@@ -127,3 +158,48 @@ class Preprocessor(OrigPreprocessor):
         X_preprocessed = TrainingInput(**result_X)
         return X_preprocessed
 
+    def _build_pipeline(self):
+        steps = []
+        if self.autoencoder is not None:
+            steps.append(
+                ("autoencoder",
+                 ColumnTransformer(transformers=[('autoencoder', instantiate(self.autoencoder), self.encoder_colname)],
+                                   remainder='passthrough',
+                                   verbose_feature_names_out=False).set_output(transform='pandas'))
+            )
+
+        if self.standardize:
+            steps.append(
+                (
+                    "standardize",
+                    StandardScaler().set_output(transform="pandas"),
+                )
+            )
+        if self.feature_selection_method is not None:
+            steps.append(
+                (
+                    "select",
+                    create_feature_selector(
+                        method=self.feature_selection_method,
+                        **self.feature_selection_kwargs,
+                    ),
+                ),
+            )
+        if self.oversampling_method is not None:
+            steps.append(
+                (
+                    "oversample",
+                    oversample_utils.OversamplerWrapper(
+                        oversample_utils.create_oversampling_model(
+                            method=self.oversampling_method,
+                            random_state=self.random_state,
+                        )
+                    ),
+                )
+            )
+        pipeline = Pipeline(steps)
+        return pipeline
+
+    def get_params(self, deep=None):
+        return {key: getattr(self, key) for key in inspect.signature(Preprocessor.__init__).parameters.keys() if
+                key != "self"}
