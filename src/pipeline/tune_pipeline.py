@@ -5,6 +5,7 @@ import logging
 
 import hydra
 from hydra.utils import instantiate
+from omegaconf import OmegaConf
 
 from src.evaluation import bootstrap, log_ci2mlflow
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
@@ -21,6 +22,7 @@ def tune_pipeline(config):
     feature_dataset = get_multimodal_feature_dataset(**config.feature_dataset)
 
     output_dir = hydra.utils.HydraConfig.get().run.dir
+    # output_dir = './outputs/meningioma/2023-08-24-07-01-59'
     # save the feature_dataset
     feature_dataset.df.to_csv(os.path.join(output_dir, 'extracted_features.csv'))
 
@@ -37,7 +39,7 @@ def tune_pipeline(config):
     # run auto preprocessing
     run_auto_preprocessing(data=feature_dataset.data,
                            result_dir=Path(output_dir),
-                           **config.preprocessing)
+                           **OmegaConf.to_container(config.preprocessing, resolve=True))
 
     # start training
     trainer = Trainer(
@@ -58,7 +60,7 @@ def tune_pipeline(config):
     # start evaluation
     pipeline = get_pipeline_from_last_run(experiment_name)
 
-    confidence_interval = bootstrap(pipeline, feature_dataset.X.to_numpy(), feature_dataset.y.to_numpy(),
+    confidence_interval = bootstrap(pipeline, feature_dataset.X, feature_dataset.y,
                                     **config.bootstrap)
 
     logger.info(confidence_interval)

@@ -16,7 +16,7 @@ feature_dataset:
     additional_features: ['ID']
 
 bootstrap:
-    iters: 100
+    iters: 10
 
 optimizer:
   n_trials: 10

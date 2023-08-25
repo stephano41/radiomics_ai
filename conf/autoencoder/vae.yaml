@@ -17,3 +17,7 @@ _args_:
       std_dim: [0,2,3,4]
       max_epochs: 10
       output_format: pandas
+      lr: 0.001
+      callbacks:
+        - _target_: skorch.callbacks.EarlyStopping
+        - _target_: skorch.callbacks.GradientNormClipping

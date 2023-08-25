@@ -63,9 +63,9 @@ def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632'):
     train_idx = idx[0]
     test_idx = idx[1]
     # print('hey')
-    model.fit(X[train_idx], Y[train_idx])
+    model.fit(index_array(X, train_idx), index_array(Y, train_idx))
 
-    test_acc = scoring_func(model, X[test_idx], Y[test_idx])
+    test_acc = scoring_func(model, index_array(X, test_idx), index_array(Y, test_idx))
     test_err = 1 - test_acc
     # training error on the whole training set as mentioned in the
     # previous comment above
@@ -85,6 +85,13 @@ def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632'):
 
         acc = 1 - (weight * test_err + (1.0 - weight) * train_err)
     return acc
+
+
+def index_array(a, idx):
+    if isinstance(a, pd.DataFrame):
+        return a.loc[idx]
+    else:
+        return a[idx]
 
 
 def get_ci_each_col(df, alpha=0.95):

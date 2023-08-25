@@ -9,6 +9,7 @@ import mlflow
 import logging
 
 from autorad.utils import mlflow_utils
+from omegaconf import OmegaConf
 from optuna.trial import Trial
 import numpy as np
 from typing import Sequence
@@ -127,7 +128,6 @@ class Trainer(OrigTrainer):
         print(mlflow.get_tracking_uri())
         mlflow.log_metric("AUC_train", float(train_auc))
 
-    # TODO investigate best_trial_params
     def save_best_preprocessor(self, best_trial_params: dict):
         feature_selection = best_trial_params["feature_selection_method"]
         oversampling = best_trial_params["oversampling_method"]
@@ -139,7 +139,6 @@ class Trainer(OrigTrainer):
         })
         preprocessor = Preprocessor(**preprocessor_kwargs)
         preprocessor.fit_transform_data(self.dataset.data)
-        mlflow.sklearn.log_model(preprocessor, "preprocessor")
         if "select" in preprocessor.pipeline.named_steps:
             selected_features = preprocessor.pipeline[
                 "select"
@@ -149,5 +148,7 @@ class Trainer(OrigTrainer):
             )
         if "autoencoder" in preprocessor.pipeline.named_steps:
             mlflow_utils.log_dict_as_artifact(
-                preprocessor.autoencoder, "autoencoder"
+               preprocessor_kwargs['autoencoder'], "autoencoder"
             )
+
+        mlflow.sklearn.log_model(preprocessor, "preprocessor")

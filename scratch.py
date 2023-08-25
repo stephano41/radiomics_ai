@@ -1,25 +1,15 @@
 import os
-import pickle
-from pathlib import Path
 
-import pandas as pd
-import torch
-import yaml
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
+import numpy as np
 
-from src.dataset import ImageDataset
-from src.dataset.dl_dataset import SitkImageProcessor
+from src.evaluation import bootstrap
 from src.models import MLClassifier
-from src.models.autoencoder import Encoder, VanillaVAE, VAELoss
 from src.pipeline.pipeline_components import get_data, get_multimodal_feature_dataset, split_feature_dataset
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
-import numpy as np
 
-from src.preprocessing import run_auto_preprocessing
 from src.training import Trainer
-from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
+from src.utils.infer_utils import get_pipeline_from_last_run
 
 
 def plot_debug(stk_image):
@@ -27,7 +17,7 @@ def plot_debug(stk_image):
     plt.imshow(sitk.GetArrayFromImage(stk_image)[5, :, :], cmap='gray')
     plt.show()
 
-output_dir = './outputs/meningioma/2023-08-20-13-16-02'
+output_dir = './outputs/meningioma/2023-08-24-10-44-04'
 # dataset = get_data('./data/meningioma_data', 't1ce', 'mask')
 # sitk_images = get_sitk_images(dataset, n_jobs=5)
 
@@ -77,20 +67,51 @@ models = MLClassifier.initialize_default_sklearn_models()
 #                                          'max_epochs': 10,
 #                                          'output_format': 'pandas'}]}
 # )
+# sitk_processor = SitkImageProcessor('./outputs', './data/meningioma_data', mask_stem='mask',
+#                                     image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=6)
+#
+# encoder = Encoder(VanillaVAE,
+#                   module__in_channels=5,
+#                   module__latent_dim=100,
+#                   module__hidden_dims= [16, 32, 64],
+#                   module__finish_size=2,
+#                   criterion=VAELoss,
+#                   std_dim=(0,2,3,4),
+#                   max_epochs=10,
+#                   output_format='pandas',
+#                   callbacks=[EarlyStopping(), GradientNormClipping()]
+#                   )
 
-trainer = Trainer(
-    dataset=feature_dataset,
-    models=models,
-    result_dir=output_dir,
-    multi_class='raise',
-    labels=[0,1]
-)
+# autoencoder_pipeline = Pipeline(steps=[
+#     ("read_data", sitk_processor),
+#     ('encoder', encoder)
+# ])
+#
+# pipeline = ColumnTransformer(transformers=[('autoencoder', autoencoder_pipeline, 'ID')], remainder='passthrough', verbose_feature_names_out=False)
+# pipeline.set_output(transform='pandas')
 
-trainer.set_optimizer('optuna', n_trials=10)
-trainer.run(auto_preprocess=True, experiment_name='meningioma')
 
-# image_paths = get_multi_paths_with_separate_folder_per_case(data_dir='./data/meningioma_data',
-#                                                             image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
-#                                                             mask_stem='mask',
-#                                                             relative=False)
+# trainer = Trainer(
+#     dataset=feature_dataset,
+#     models=models,
+#     result_dir=output_dir,
+#     multi_class='raise',
+#     labels=[0,1]
+# )
+#
+# trainer.set_optimizer('optuna', n_trials=10)
+# trainer.run(auto_preprocess=True, experiment_name='meningioma')
+
+pipeline = get_pipeline_from_last_run('meningioma')
+
+# idx = np.random.randint(0,115, size=115)
+#
+# pipeline.fit(feature_dataset.X.loc[idx], feature_dataset.y.loc[idx])
+
+confidence_interval = bootstrap(pipeline, feature_dataset.X, feature_dataset.y,
+                                iters=10,
+                                num_cpu=2,
+                                labels=[0,1],
+                                method='.632+',
+                                stratify=True)
 

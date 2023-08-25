@@ -9,7 +9,7 @@ from sklearn.base import TransformerMixin
 from skorch import NeuralNet
 from torch.utils.data import Subset
 
-from src.dataset.dl_dataset import SitkImageTransformer
+from src.dataset import SitkImageTransformer
 from src.models.autoencoder import VanillaVAE, VAELoss
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 from typing import Any
 
+import hydra.errors
 from autorad.feature_selection import create_feature_selector
 from autorad.preprocessing import Preprocessor as OrigPreprocessor, oversample_utils
 import logging
@@ -16,8 +17,6 @@ from hydra.utils import instantiate
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-
-from src.dataset import FeatureDataset
 
 log = logging.getLogger(__name__)
 
@@ -161,9 +160,14 @@ class Preprocessor(OrigPreprocessor):
     def _build_pipeline(self):
         steps = []
         if self.autoencoder is not None:
+            try:
+                autoencoder = instantiate(self.autoencoder, _convert_='object')
+            except hydra.errors.InstantiationException:
+                autoencoder = self.autoencoder
+
             steps.append(
                 ("autoencoder",
-                 ColumnTransformer(transformers=[('autoencoder', instantiate(self.autoencoder), self.encoder_colname)],
+                 ColumnTransformer(transformers=[('autoencoder', autoencoder, self.encoder_colname)],
                                    remainder='passthrough',
                                    verbose_feature_names_out=False).set_output(transform='pandas'))
             )
