@@ -1,10 +1,9 @@
+import multiprocessing
 from functools import partial
-from multiprocessing.pool import Pool
 from typing import Dict
 
 import mlflow
 import pandas as pd
-import ray
 import numpy as np
 from .stratified_bootstrap import BootstrapGenerator
 from tqdm import tqdm
@@ -22,31 +21,29 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
 
     oob = BootstrapGenerator(n_splits=iters, stratify=stratify)
 
-    score_func = Scorer(multiclass=len(np.unique(Y)>2),
+    score_func = Scorer(multiclass=len(np.unique(Y) > 2),
                         labels=labels)
     scores = []
 
-    if num_gpu <= 0:
-        # use default python
-        partial_bootstrap = partial(_one_bootstrap, model=model, scoring_func=score_func,
-                                    X=X, Y=Y, method=method)
-        with Pool(num_cpu) as pool:
-            for score in tqdm(pool.imap_unordered(partial_bootstrap, oob.split(X, Y)), total=oob.n_splits):
-                scores.append(score)
-    else:
-        remote_bootstrap = ray.remote(num_gpus=num_gpu, max_calls=1)(_one_bootstrap)
-        model_id, X_id, Y_id, score_func_id, method_id = ray.put(model), ray.put(X), ray.put(Y), ray.put(
-            score_func), ray.put(method)
-        scores = ray.get([remote_bootstrap.remote(idx, model=model_id, scoring_func=score_func_id,
-                                                  X=X_id, Y=Y_id, method=method_id) for idx in
-                          oob.split(X, Y)])
-        ray.shutdown()
+    partial_bootstrap = partial(_one_bootstrap, model=model, scoring_func=score_func,
+                                X=X, Y=Y, method=method)
+    with multiprocessing.get_context('spawn').Pool(num_cpu) as pool:
+        for score in tqdm(pool.imap_unordered(partial_bootstrap, oob.split(X, Y)), total=oob.n_splits):
+            scores.append(score)
+
+    # remote_bootstrap = ray.remote(num_gpus=num_gpu, max_calls=1, num_cpus=num_cpu)(_one_bootstrap)
+    # model_id, X_id, Y_id = ray.put(model), ray.put(X), ray.put(Y)
+    # score_func_id, method_id = ray.put(score_func), ray.put(method)
+    # scores = ray.get([remote_bootstrap.remote(idx, model=model_id, scoring_func=score_func_id,
+    #                                           X=X_id, Y=Y_id, method=method_id) for idx in
+    #                   oob.split(X, Y)])
+    # ray.shutdown()
 
     return get_ci_each_col(pd.concat(scores, ignore_index=True), alpha)
 
 
 def log_ci2mlflow(ci_dict: Dict, run_id=None):
-    metrics_dict={}
+    metrics_dict = {}
 
     for name, (lower, upper) in ci_dict.items():
         metrics_dict[name + '_ll'] = lower
@@ -95,7 +92,7 @@ def index_array(a, idx):
 
 
 def get_ci_each_col(df, alpha=0.95):
-    result={}
+    result = {}
     for column in df:
         series = df[column]
         result[series.name] = get_ci(series.array, alpha)
@@ -109,4 +106,3 @@ def get_ci(data, alpha=0.95):
     p = (alpha + ((1.0 - alpha) / 2.0)) * 100
     upper = min(1.0, np.percentile(data, p))
     return lower, upper
-

@@ -41,7 +41,7 @@ feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_dat
 feature_dataset = split_feature_dataset(feature_dataset,
                                         existing_split=os.path.join(output_dir,'splits.yml'))
 
-models = MLClassifier.initialize_default_sklearn_models()
+# models = MLClassifier.initialize_default_sklearn_models()
 
 # run auto preprocessing
 # run_auto_preprocessing(data=feature_dataset.data,
@@ -107,11 +107,14 @@ pipeline = get_pipeline_from_last_run('meningioma')
 # idx = np.random.randint(0,115, size=115)
 #
 # pipeline.fit(feature_dataset.X.loc[idx], feature_dataset.y.loc[idx])
+if __name__ == '__main__':
+    confidence_interval = bootstrap(pipeline, feature_dataset.X, feature_dataset.y,
+                                    iters=10,
+                                    num_cpu=2,
+                                    num_gpu=0,
+                                    labels=[0,1],
+                                    method='.632+',
+                                    stratify=True)
 
-confidence_interval = bootstrap(pipeline, feature_dataset.X, feature_dataset.y,
-                                iters=10,
-                                num_cpu=2,
-                                labels=[0,1],
-                                method='.632+',
-                                stratify=True)
+    print(confidence_interval)
 

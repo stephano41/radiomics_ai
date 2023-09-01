@@ -1,5 +1,5 @@
 # @package _global_
-name: meningioma
+name: meningioma_ablation
 labels: [0,1]
 multi_class: raise
 
@@ -12,19 +12,20 @@ feature_dataset:
     extraction_params: ./conf/radiomic_params/meningioma_mr.yaml
     feature_df_merger: {_target_: src.pipeline.df_mergers.meningioma_df_merger}
     label_csv_encoding: Null
-    existing_feature_df: ./outputs/meningioma_feature_dataset.csv
-    additional_features: ['ID']
+#     existing_feature_df: ./outputs/meningioma_feature_dataset.csv
+#     additional_features: ['ID']
 
 bootstrap:
-    iters: 10
+    iters: 300
+    num_cpu: 3
 
 optimizer:
-  n_trials: 10
+  n_trials: 100
 
 models:
   - Random Forest
   - SVM
   - XGBoost
 
-defaults:
-    - /autoencoder@preprocessing.autoencoder: vae
+# defaults:
+#     - /autoencoder@preprocessing.autoencoder: vae

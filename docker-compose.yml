@@ -17,6 +17,14 @@ services:
             ports:
                 - 8000:8000
             mem_limit: 8000m
+            shm_size: 6gb
+            deploy:
+              resources:
+                reservations:
+                  devices:
+                    - driver: nvidia
+                      count: 1
+                      capabilities: [gpu]
 
     jupyter:
         <<: *default

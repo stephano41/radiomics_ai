@@ -16,6 +16,7 @@ _args_:
       module__finish_size: 2
       std_dim: [0,2,3,4]
       max_epochs: 10
+      verbose: 0
       output_format: pandas
       lr: 0.001
       callbacks:

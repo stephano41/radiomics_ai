@@ -8,7 +8,9 @@ Boruta @ git+https://github.com/Jorjatorz/boruta_py_2.git
 mlxtend
 ray
 dipy
+skorch
+
+--find-links https://download.pytorch.org/whl/cu117
 torch
 torchvision
 torchaudio
-skorch
