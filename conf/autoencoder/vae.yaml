@@ -11,14 +11,17 @@ _args_:
     - _target_: src.models.autoencoder.nn_encoder.Encoder
       module: vanillavae
       module__in_channels: 5
-      module__latent_dim: 256
-      module__hidden_dims: [16, 32, 64]
+      module__latent_dim: 128
+      module__hidden_dims: [32, 64, 128]
       module__finish_size: 2
       std_dim: [0,2,3,4]
       max_epochs: 10
       verbose: 0
       output_format: pandas
-      lr: 0.001
+      optimizer: torch.optim.AdamW
+      lr: 0.0002
       callbacks:
         - _target_: skorch.callbacks.EarlyStopping
+          load_best: True
         - _target_: skorch.callbacks.GradientNormClipping
+

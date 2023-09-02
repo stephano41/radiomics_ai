@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+    - meningioma.yaml
+    - /autoencoder@preprocessing.autoencoder: vae
+    - _self_
+
+name: meningioma+autoencoder
+
+feature_dataset:
+     additional_features: ['ID']
+
+bootstrap:
+    num_cpu: 3
+

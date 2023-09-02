@@ -179,7 +179,7 @@ class VanillaVAE(BaseVAE):
 
 
 class VAELoss(nn.Module):
-    def __init__(self, kld_weight=0.005):
+    def __init__(self, kld_weight=0.00025):
         super().__init__()
         self.kld_weight = kld_weight
 

@@ -9,7 +9,6 @@ import mlflow
 import logging
 
 from autorad.utils import mlflow_utils
-from omegaconf import OmegaConf
 from optuna.trial import Trial
 import numpy as np
 from typing import Sequence

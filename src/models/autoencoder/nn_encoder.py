@@ -83,6 +83,10 @@ class Encoder(NeuralNet, TransformerMixin):
     def get_feature_names_out(self):
         pass
 
+    def generate(self, x):
+        x = (dfsitk2tensor(x) - self._mean) / self._std
+        return self.module_.generate(x)
+
 
 
 def dfsitk2tensor(df):

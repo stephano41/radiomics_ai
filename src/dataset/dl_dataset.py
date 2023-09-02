@@ -18,8 +18,7 @@ from ..utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 
 class SitkImageTransformer:
     def __init__(self, transform_kwargs=None):
-        if transform_kwargs is None:
-            self.transform_kwargs = dict(aug_transform=sitk.Similarity3DTransform(),
+        default_transform_kwargs = dict(aug_transform=sitk.Similarity3DTransform(),
                                          thetaX=(0, 0),
                                          thetaY=(0, 0),
                                          thetaZ=(-np.pi / 2, np.pi / 2),
@@ -28,6 +27,10 @@ class SitkImageTransformer:
                                          tz=(0, 0),
                                          scale=(1, 1),
                                          n=2)
+        if transform_kwargs is None:
+            transform_kwargs = {}
+        default_transform_kwargs.update(transform_kwargs)
+        self.transform_kwargs = default_transform_kwargs
 
     def transform(self, sitk_images: pd.DataFrame, y=None):
         generated_images = []
