@@ -21,7 +21,7 @@ class SitkImageTransformer:
         default_transform_kwargs = dict(aug_transform=sitk.Similarity3DTransform(),
                                          thetaX=(0, 0),
                                          thetaY=(0, 0),
-                                         thetaZ=(-np.pi / 2, np.pi / 2),
+                                         thetaZ=(-180, 180),
                                          tx=(0, 0),
                                          ty=(0, 0),
                                          tz=(0, 0),

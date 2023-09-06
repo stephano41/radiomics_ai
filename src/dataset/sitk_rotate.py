@@ -1,7 +1,6 @@
-
 import numpy as np
 import SimpleITK as sitk
-
+from typing import Union,Tuple
 
 def eul2quat(ax, ay, az, atol=1e-8):
     """
@@ -55,8 +54,16 @@ def eul2quat(ax, ay, az, atol=1e-8):
         qv[2] = (r[1, 0] - r[0, 1]) / denom
     return qv
 
+
 def similarity3D_parameter_space_random_sampling(
-    thetaX, thetaY, thetaZ, tx, ty, tz, scale, n
+        thetaX: Union[float, Tuple[float, float]],
+        thetaY: Union[float, Tuple[float, float]],
+        thetaZ: Union[float, Tuple[float, float]],
+        tx: Union[float, Tuple[float, float]],
+        ty: Union[float, Tuple[float, float]],
+        tz: Union[float, Tuple[float, float]],
+        scale: Union[float, Tuple[float, float]],
+        n: int
 ):
     """
     Create a list representing a random (uniform) sampling of the 3D similarity transformation parameter space. As the
@@ -64,13 +71,17 @@ def similarity3D_parameter_space_random_sampling(
     intuitive way of specifying rotations. We therefor use the ZYX Euler angle parametrization and convert to
     versor.
     Args:
-        thetaX, thetaY, thetaZ: Ranges of Euler angle values to use, in radians.
+        thetaX, thetaY, thetaZ: Ranges of Euler angle values to use, in degrees.
         tx, ty, tz: Ranges of translation values to use in mm.
         scale: Range of scale values to use.
         n: Number of samples.
     Return:
         List of lists representing the parameter space sampling (vx,vy,vz,tx,ty,tz,s).
     """
+    thetaX = tuple(degrees_to_radians(i) for i in thetaX)
+    thetaY = tuple(degrees_to_radians(i) for i in thetaY)
+    thetaZ = tuple(degrees_to_radians(i) for i in thetaZ)
+
     theta_x_vals = (thetaX[1] - thetaX[0]) * np.random.random(n) + thetaX[0]
     theta_y_vals = (thetaY[1] - thetaY[0]) * np.random.random(n) + thetaY[0]
     theta_z_vals = (thetaZ[1] - thetaZ[0]) * np.random.random(n) + thetaZ[0]
@@ -83,14 +94,19 @@ def similarity3D_parameter_space_random_sampling(
     )
     return [list(eul2quat(*(p[0:3]))) + list(p[3:7]) for p in res]
 
+
+def degrees_to_radians(degrees):
+    return degrees * np.pi / 180.0
+
+
 def augment_images_spatial(
-    original_image,
-    reference_image,
-    T0,
-    T_aug,
-    transformation_parameters,
-    interpolator=sitk.sitkLinear,
-    default_intensity_value=0.0,
+        original_image,
+        reference_image,
+        T0,
+        T_aug,
+        transformation_parameters,
+        interpolator=sitk.sitkLinear,
+        default_intensity_value=0.0,
 ):
     """
     Generate the resampled images based on the given transformations.
@@ -134,8 +150,8 @@ def augment_images_spatial(
     return all_images  # Used only for display purposes in this notebook.
 
 
-def sitk_transform3D(image, aug_transform=None, thetaX=(0,0), thetaY=(0,0), thetaZ=(0,0), tx=(0,0), ty=(0,0), tz=(0,0), scale=(1,1), n=2):
-
+def sitk_transform3D(image, aug_transform=None, thetaX=(0, 0), thetaY=(0, 0), thetaZ=(0, 0), tx=(0, 0), ty=(0, 0),
+                     tz=(0, 0), scale=(1, 1), n=2):
     if aug_transform is None:
         aug_transform = sitk.Similarity3DTransform()
 
@@ -150,7 +166,8 @@ def sitk_transform3D(image, aug_transform=None, thetaX=(0,0), thetaY=(0,0), thet
     reference_image.SetSpacing(reference_spacing)
     reference_image.SetDirection(reference_direction)
 
-    reference_center = np.array(reference_image.TransformContinuousIndexToPhysicalPoint(np.array(reference_image.GetSize())/2.0))
+    reference_center = np.array(
+        reference_image.TransformContinuousIndexToPhysicalPoint(np.array(reference_image.GetSize()) / 2.0))
 
     transform = sitk.AffineTransform(dimension)
     transform.SetMatrix(image.GetDirection())
@@ -170,14 +187,14 @@ def sitk_transform3D(image, aug_transform=None, thetaX=(0,0), thetaY=(0,0), thet
     aug_transform.SetCenter(reference_center)
 
     transformation_parameters_list = similarity3D_parameter_space_random_sampling(
-            thetaX=thetaX,
-            thetaY=thetaY,
-            thetaZ=thetaZ,
-            tx=tx,
-            ty=ty,
-            tz=tz,
-            scale=scale,
-            n=n)
+        thetaX=thetaX,
+        thetaY=thetaY,
+        thetaZ=thetaZ,
+        tx=tx,
+        ty=ty,
+        tz=tz,
+        scale=scale,
+        n=n)
 
     generated_images = augment_images_spatial(
         image,
