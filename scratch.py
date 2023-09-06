@@ -4,14 +4,16 @@ from datetime import datetime
 import numpy as np
 import torch.optim
 from sklearn.pipeline import Pipeline
-from skorch.callbacks import EarlyStopping, GradientNormClipping
+from skorch.helper import SkorchDoctor
+from skorch.callbacks import EarlyStopping, GradientNormClipping, Checkpoint
 
 from src.dataset import SitkImageProcessor
 from src.evaluation import bootstrap
 from src.models import MLClassifier
 from src.models.autoencoder import Encoder, VanillaVAE, VAELoss, MSSIM, LogCashLoss, BetaVAELoss
 from src.models.autoencoder.nn_encoder import dfsitk2tensor
-from src.pipeline.pipeline_components import get_data, get_multimodal_feature_dataset, split_feature_dataset
+from src.models.callbacks import SimpleLoadInitState
+from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
 
@@ -114,47 +116,56 @@ feature_dataset = split_feature_dataset(feature_dataset,
 sitk_processor = SitkImageProcessor('./outputs', './data/meningioma_data', mask_stem='mask',
                                     image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=6)
 
-encoder = Encoder(VanillaVAE,
-                  module__in_channels=5,
-                  module__latent_dim=128,
-                  module__hidden_dims= [32, 64, 128],
-                  module__finish_size=2,
-                  criterion=MSSIM,
-                  std_dim=(0,2,3,4),
-                  max_epochs=100,
-                  output_format='pandas',
-                  callbacks=[EarlyStopping(load_best=True), GradientNormClipping()],
-                  optimizer=torch.optim.AdamW,
-                  lr= 0.0002,
-                  augment_train=True,
-                  # criterion__loss_type='B',
-                  # criterion__gamma=10.0,
 
-                  # criterion__alpha=10.0,
-                  # criterion__beta=1.0
-                  criterion__in_channels=5,
-                  criterion__window_size=3,
-                  transform_kwargs=dict(thetaX=(-np.pi / 2, np.pi / 2),
-                                         thetaY=(-np.pi / 2, np.pi / 2),
-                                         thetaZ=(-np.pi / 2, np.pi / 2),
-                                         tx=(-1, 1),
-                                         ty=(-1, 1),
-                                         tz=(-1, 1),
-                                         scale=(1, 1),
-                                         n=10)
-)
+for i, (train_x, train_y, val_x, val_y) in enumerate(zip(feature_dataset.data.X.train_folds, feature_dataset.data.y.train_folds, feature_dataset.data.X.val_folds, feature_dataset.data.y.val_folds)):
+    encoder = Encoder(VanillaVAE,
+                      module__in_channels=5,
+                      module__latent_dim=128,
+                      module__hidden_dims=[32, 64, 128],
+                      module__finish_size=2,
+                      criterion=MSSIM,
+                      std_dim=(0, 2, 3, 4),
+                      max_epochs=200,
+                      output_format='pandas',
+                      callbacks=[EarlyStopping(load_best=True),
+                                 GradientNormClipping(1),
+                                 SimpleLoadInitState(f_optimizer='outputs/saved_models/optimizer.pt',
+                                                     f_params='outputs/saved_models/params.pt')],
+                      optimizer=torch.optim.AdamW,
+                      lr=0.00005,
+                      augment_train=True,
+                      # criterion__loss_type='B',
+                      # criterion__gamma=10.0,
+
+                      # criterion__alpha=10.0,
+                      # criterion__beta=1.0
+                      criterion__in_channels=5,
+                      criterion__window_size=4,
+                      transform_kwargs=dict(thetaX=(-90, 90),
+                                            thetaY=(-90, 90),
+                                            thetaZ=(-90, 90),
+                                            tx=(-1, 1),
+                                            ty=(-1, 1),
+                                            tz=(-1, 1),
+                                            scale=(1, 1),
+                                            n=10),
+                      device='cuda'
+                      )
+
+    images = sitk_processor.fit_transform(train_x['ID'])
+    encoder.fit(images)
+
+    generated_images = encoder.generate(images)
+
+    destd_images = (generated_images * encoder._std + encoder._mean).numpy()
+    plot_slices(destd_images, 8, 2, original_tensor=dfsitk2tensor(images), title=datetime.now().strftime(f"%Y%m%d%H%M%S-fold{i}"))
 
 
-images = sitk_processor.fit_transform(feature_dataset.data.X.train['ID'])
+# encoder.save_params(f_params='outputs/saved_models/params.pt', f_optimizer='outputs/saved_models/optimizer.pt', f_history='outputs/saved_models/history.json')
 
-encoder.fit(images)
 
-generated_images = encoder.generate(images)
-
-destd_images = (generated_images * encoder._std + encoder._mean).detach().numpy()
 
 # print(generated_images)
-plot_slices(destd_images, 8, 2, original_tensor=dfsitk2tensor(images), title=datetime.now().strftime("%Y%m%d%H%M%S"))
 
 # pipeline = ColumnTransformer(transformers=[('autoencoder', autoencoder_pipeline, 'ID')], remainder='passthrough', verbose_feature_names_out=False)
 # pipeline.set_output(transform='pandas')
@@ -176,5 +187,4 @@ plot_slices(destd_images, 8, 2, original_tensor=dfsitk2tensor(images), title=dat
 # idx = np.random.randint(0,115, size=115)
 #
 # pipeline.fit(feature_dataset.X.loc[idx], feature_dataset.y.loc[idx])
-
 

@@ -18,7 +18,7 @@ bootstrap:
     iters: 300
 
 optimizer:
-  n_trials: 100
+  n_trials: 150
 
 models:
   - Random Forest

@@ -11,5 +11,5 @@ feature_dataset:
      additional_features: ['ID']
 
 bootstrap:
-    num_cpu: 3
+    num_cpu: 1
 
