@@ -27,9 +27,14 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
 
     partial_bootstrap = partial(_one_bootstrap, model=model, scoring_func=score_func,
                                 X=X, Y=Y, method=method)
-    with multiprocessing.get_context('spawn').Pool(num_cpu) as pool:
-        for score in tqdm(pool.imap_unordered(partial_bootstrap, oob.split(X, Y)), total=oob.n_splits):
-            scores.append(score)
+
+    if num_cpu>1:
+
+        with multiprocessing.get_context('spawn').Pool(num_cpu) as pool:
+            for score in tqdm(pool.imap_unordered(partial_bootstrap, oob.split(X, Y)), total=oob.n_splits):
+                scores.append(score)
+    else:
+        scores = [partial_bootstrap(idx) for idx in oob.split(X, Y)]
 
     # remote_bootstrap = ray.remote(num_gpus=num_gpu, max_calls=1, num_cpus=num_cpu)(_one_bootstrap)
     # model_id, X_id, Y_id = ray.put(model), ray.put(X), ray.put(Y)
