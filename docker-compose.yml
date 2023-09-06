@@ -12,6 +12,7 @@ services:
             environment:
                 - AUTORAD_RESULT_DIR=./outputs
                 - HYDRA_FULL_ERROR=1
+                - TZ=Australia/Adelaide
             tty: true
             stdin_open: true
             ports:
