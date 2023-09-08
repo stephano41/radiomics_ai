@@ -13,6 +13,7 @@ services:
                 - AUTORAD_RESULT_DIR=./outputs
                 - HYDRA_FULL_ERROR=1
                 - TZ=Australia/Adelaide
+                - WANDB_API_KEY=${WANDB_API_KEY}
             tty: true
             stdin_open: true
             ports:

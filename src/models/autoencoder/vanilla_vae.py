@@ -4,6 +4,7 @@ import torch
 from .base_vae import BaseVAE
 from torch import nn, Tensor
 from torch.nn import functional as F
+import torch.nn.init as init
 
 
 class VanillaVAE(BaseVAE):
@@ -12,8 +13,7 @@ class VanillaVAE(BaseVAE):
                  in_channels: int,
                  latent_dim: int,
                  hidden_dims: List = None,
-                 finish_size=2,
-                 **kwargs) -> None:
+                 finish_size=2) -> None:
         super(VanillaVAE, self).__init__()
 
         self.in_channels = in_channels
@@ -75,6 +75,8 @@ class VanillaVAE(BaseVAE):
             nn.Conv3d(hidden_dims[-1], out_channels=self.in_channels,
                       kernel_size=3, padding=1),
             nn.Tanh())
+
+        self.apply(he_init)
 
     def encode(self, input: Tensor) -> List[Tensor]:
         """
@@ -198,3 +200,14 @@ class VAELoss(nn.Module):
 
         loss = recons_loss + self.kld_weight * kld_loss
         return loss
+
+
+def he_init(m):
+    if isinstance(m, (nn.Linear, nn.Conv2d, nn.Conv3d, nn.ConvTranspose3d)):
+        init.kaiming_normal(m.weight)
+        if m.bias is not None:
+            m.bias.data.fill_(0)
+    elif isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+        m.weight.data.fill_(1)
+        if m.bias is not None:
+            m.bias.data.fill_(0)

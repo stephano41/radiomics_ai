@@ -3,6 +3,7 @@ from datetime import datetime
 
 import numpy as np
 import torch.optim
+from sklearn import clone
 from sklearn.pipeline import Pipeline
 from skorch.helper import SkorchDoctor
 from skorch.callbacks import EarlyStopping, GradientNormClipping, Checkpoint
@@ -17,7 +18,7 @@ from src.pipeline.pipeline_components import get_multimodal_feature_dataset, spl
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
 
-from src.training import Trainer
+from src.training import Trainer, EncoderTrainer
 from src.utils.infer_utils import get_pipeline_from_last_run
 
 
@@ -116,49 +117,67 @@ feature_dataset = split_feature_dataset(feature_dataset,
 sitk_processor = SitkImageProcessor('./outputs', './data/meningioma_data', mask_stem='mask',
                                     image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=6)
 
+encoder = Encoder(VanillaVAE,
+                  module__in_channels=5,
+                  module__latent_dim=128,
+                  module__hidden_dims=[32, 64, 128],
+                  module__finish_size=2,
+                  criterion=BetaVAELoss,
+                  std_dim=(0, 2, 3, 4),
+                  max_epochs=200,
+                  output_format='pandas',
+                  callbacks=[EarlyStopping(load_best=True),
+                             GradientNormClipping(1),
+                             # SimpleLoadInitState(f_optimizer='outputs/saved_models/optimizer.pt',
+                             #                     f_params='outputs/saved_models/params.pt')
+                             ],
+                  optimizer=torch.optim.AdamW,
+                  lr=0.0001,
+                  criterion__loss_type='B',
+                  # criterion__gamma=10.0,
+                  criterion__max_capacity=1,
 
-for i, (train_x, train_y, val_x, val_y) in enumerate(zip(feature_dataset.data.X.train_folds, feature_dataset.data.y.train_folds, feature_dataset.data.X.val_folds, feature_dataset.data.y.val_folds)):
-    encoder = Encoder(VanillaVAE,
-                      module__in_channels=5,
-                      module__latent_dim=128,
-                      module__hidden_dims=[32, 64, 128],
-                      module__finish_size=2,
-                      criterion=MSSIM,
-                      std_dim=(0, 2, 3, 4),
-                      max_epochs=200,
-                      output_format='pandas',
-                      callbacks=[EarlyStopping(load_best=True),
-                                 GradientNormClipping(1),
-                                 SimpleLoadInitState(f_optimizer='outputs/saved_models/optimizer.pt',
-                                                     f_params='outputs/saved_models/params.pt')],
-                      optimizer=torch.optim.AdamW,
-                      lr=0.00005,
-                      augment_train=True,
-                      # criterion__loss_type='B',
-                      # criterion__gamma=10.0,
+                  # criterion__alpha=10.0,
+                  # criterion__beta=1.0
+                  # criterion__in_channels=5,
+                  # criterion__window_size=4,
+                  transform_kwargs=dict(thetaX=(-90, 90),
+                                        thetaY=(-90, 90),
+                                        thetaZ=(-90, 90),
+                                        tx=(-1, 1),
+                                        ty=(-1, 1),
+                                        tz=(-1, 1),
+                                        scale=(1, 1),
+                                        n=10),
+                  device='cuda'
+                  )
 
-                      # criterion__alpha=10.0,
-                      # criterion__beta=1.0
-                      criterion__in_channels=5,
-                      criterion__window_size=4,
-                      transform_kwargs=dict(thetaX=(-90, 90),
-                                            thetaY=(-90, 90),
-                                            thetaZ=(-90, 90),
-                                            tx=(-1, 1),
-                                            ty=(-1, 1),
-                                            tz=(-1, 1),
-                                            scale=(1, 1),
-                                            n=10),
-                      device='cuda'
-                      )
+param_grid = {
+    "module__latent_dim": [128, 256, 512, 1024],
+    'lr': [0.01, 0.001, 0.0001],
+    # 'criterion__beta': [],
+    'criterion__gamma': [10, 100, 1000, 10000],
+    'criterion__kld_weight': [0.001, 0.01, 0.0001],
+    'criterion__max_capacity': [0,5,10,20,40]
 
-    images = sitk_processor.fit_transform(train_x['ID'])
-    encoder.fit(images)
+}
 
-    generated_images = encoder.generate(images)
+trainer = EncoderTrainer(encoder, param_grid, feature_dataset,sitk_processor)
+trainer.run(wandb_kwargs={'project': 'autoencoder_tuning',
+                          'dir': './outputs',
+                          # 'mode': 'off'
+                          })
 
-    destd_images = (generated_images * encoder._std + encoder._mean).numpy()
-    plot_slices(destd_images, 8, 2, original_tensor=dfsitk2tensor(images), title=datetime.now().strftime(f"%Y%m%d%H%M%S-fold{i}"))
+# for i, (train_x, train_y, val_x, val_y) in enumerate(zip(feature_dataset.data.X.train_folds, feature_dataset.data.y.train_folds, feature_dataset.data.X.val_folds, feature_dataset.data.y.val_folds)):
+#     # _encoder = type(encoder)(**encoder.get_params())
+#     _encoder = clone(encoder)
+#
+#     images = sitk_processor.fit_transform(train_x['ID'])
+#     _encoder.fit(images)
+#
+#     generated_images = _encoder.generate(images)
+#
+#     plot_slices(generated_images, 8, 2, original_tensor=dfsitk2tensor(images), title=datetime.now().strftime(f"%Y%m%d%H%M%S-fold{i}"))
 
 
 # encoder.save_params(f_params='outputs/saved_models/params.pt', f_optimizer='outputs/saved_models/optimizer.pt', f_history='outputs/saved_models/history.json')

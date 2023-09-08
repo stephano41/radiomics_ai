@@ -32,14 +32,12 @@ class SimpleLoadInitState(Callback):
                  f_params=None,
                  f_optimizer=None,
                  f_criterion=None,
-                 f_history=None,
-                 **kwargs):
+                 f_history=None):
 
         self.f_params = f_params
         self.f_optimizer = f_optimizer
         self.f_criterion = f_criterion
         self.f_history = f_history
-        self.kwargs = kwargs
 
     def initialize(self):
         self.did_load_ = False
@@ -50,5 +48,5 @@ class SimpleLoadInitState(Callback):
         if not self.did_load_:
             self.did_load_ = True
             net.load_params(f_params=self.f_params, f_history=self.f_history, f_optimizer=self.f_optimizer,
-                            f_criterion=self.f_criterion, **self.kwargs)
+                            f_criterion=self.f_criterion)
 

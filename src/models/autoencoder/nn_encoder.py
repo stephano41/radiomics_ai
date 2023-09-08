@@ -17,7 +17,7 @@ class Encoder(NeuralNet, TransformerMixin):
                  output_format='tensor', image_augmenter=SitkImageTransformer,
                  **kwargs):
         self.standardise = standardise
-        self.std_dim = tuple(std_dim)
+        self.std_dim = std_dim if isinstance(std_dim, tuple) else tuple(std_dim)
         self.transform_kwargs = transform_kwargs
         self.image_augmenter = image_augmenter
         self.output_format = output_format
@@ -79,7 +79,8 @@ class Encoder(NeuralNet, TransformerMixin):
     def generate(self, x):
         with torch.no_grad():
             x = to_device((dfsitk2tensor(x) - self._mean) / self._std, self.device)
-            return to_device(self.module_.generate(x), 'cpu').detach()
+            output = to_device(self.module_.generate(x), 'cpu').detach()
+            return (output * self._std + self._mean).numpy()
 
 
 def dfsitk2tensor(df):
