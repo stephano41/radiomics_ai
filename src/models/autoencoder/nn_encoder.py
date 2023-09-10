@@ -7,7 +7,7 @@ import torch
 from sklearn.base import TransformerMixin
 
 from skorch import NeuralNet
-from skorch.utils import to_device
+from skorch.utils import to_device, to_tensor
 
 from src.dataset import SitkImageTransformer
 
@@ -81,6 +81,45 @@ class Encoder(NeuralNet, TransformerMixin):
             x = to_device((dfsitk2tensor(x) - self._mean) / self._std, self.device)
             output = to_device(self.module_.generate(x), 'cpu').detach()
             return (output * self._std + self._mean).numpy()
+
+    def get_loss(self, y_pred, y_true, X=None, training=False):
+        """Return the loss for this batch.
+
+        Parameters
+        ----------
+        y_pred : torch tensor
+          Predicted target values
+
+        y_true : torch tensor
+          True target values.
+
+        X : input data, compatible with skorch.dataset.Dataset
+          By default, you should be able to pass:
+
+            * numpy arrays
+            * torch tensors
+            * pandas DataFrame or Series
+            * scipy sparse CSR matrices
+            * a dictionary of the former three
+            * a list/tuple of the former three
+            * a Dataset
+
+          If this doesn't work with your data, you have to pass a
+          ``Dataset`` that can deal with the data.
+
+        training : bool (default=False)
+          Whether train mode should be used or not.
+
+        """
+        y_true = to_tensor(y_true, device=self.device)
+        loss = self.criterion_(y_pred, y_true)
+
+        if isinstance(loss, dict):
+            for name, value in loss.items():
+                self.history.record_batch(name, value.data.cpu().detach().numpy())
+            return loss['loss']
+
+        return loss
 
 
 def dfsitk2tensor(df):

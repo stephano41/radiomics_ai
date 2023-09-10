@@ -8,14 +8,14 @@ from torch.nn import functional as F
 from .initialisations import he_init
 
 
-class VanillaVAE(BaseVAE):
+class DeepVae(BaseVAE):
 
     def __init__(self,
                  in_channels: int,
                  latent_dim: int,
                  hidden_dims: List = None,
                  finish_size=2) -> None:
-        super(VanillaVAE, self).__init__()
+        super().__init__()
 
         self.in_channels = in_channels
         self.latent_dim = latent_dim
@@ -23,16 +23,16 @@ class VanillaVAE(BaseVAE):
 
         modules = []
         if hidden_dims is None:
-            hidden_dims = [32, 64, 128, 256, 512]
+            hidden_dims = [(2, 32), (1, 64), (2, 128), (1, 256), (2, 512)]
 
         self.hidden_dims = hidden_dims.copy()
 
         # Build Encoder
-        for h_dim in hidden_dims:
+        for stride, h_dim in hidden_dims:
             modules.append(
                 nn.Sequential(
                     nn.Conv3d(in_channels, out_channels=h_dim,
-                              kernel_size=3, stride=2, padding=1),
+                              kernel_size=3, stride=stride, padding=1),
                     nn.BatchNorm3d(h_dim),
                     nn.LeakyReLU())
             )
@@ -52,13 +52,13 @@ class VanillaVAE(BaseVAE):
         for i in range(len(hidden_dims) - 1):
             modules.append(
                 nn.Sequential(
-                    nn.ConvTranspose3d(hidden_dims[i],
-                                       hidden_dims[i + 1],
-                                       kernel_size=3,
+                    nn.ConvTranspose3d(hidden_dims[i][1],
+                                       hidden_dims[i + 1][1],
+                                       kernel_size=hidden_dims[i][0],
                                        stride=2,
                                        padding=1,
                                        output_padding=1),
-                    nn.BatchNorm3d(hidden_dims[i + 1]),
+                    nn.BatchNorm3d(hidden_dims[i + 1][1]),
                     nn.LeakyReLU())
             )
 
@@ -175,27 +175,3 @@ class VanillaVAE(BaseVAE):
         """
 
         return self.forward(x)[0]
-
-
-class VAELoss(nn.Module):
-    def __init__(self, kld_weight=0.00025):
-        super().__init__()
-        self.kld_weight = kld_weight
-
-    def forward(self, *args, **kwargs):
-
-        # args from scorch is ([recons, input, mu, log_var] ,X)
-        recons = args[0][0]
-        input = args[0][1]
-        mu = args[0][2]
-        log_var = args[0][3]
-
-        # kld_weight = kwargs['M_N']  # Account for the minibatch samples from the dataset
-        recons_loss = F.mse_loss(recons, input)
-
-        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim=1), dim=0)
-
-        loss = recons_loss + self.kld_weight * kld_loss
-        return loss
-
-

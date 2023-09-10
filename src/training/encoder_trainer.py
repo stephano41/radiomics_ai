@@ -26,7 +26,7 @@ class EncoderTrainer:
             self.image_reader = SitkImageProcessor('./outputs', './data/meningioma_data', mask_stem='mask',
                                     image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=6)
 
-    def run(self, wandb_kwargs, num_samples=5, slice_index=8):
+    def run(self, wandb_kwargs, num_samples=5, slice_index=8, save_model=True):
         if wandb_kwargs.get('project', None) is not None:
             existing_runs = load_runs(wandb_kwargs['project'])
         else:
@@ -53,7 +53,7 @@ class EncoderTrainer:
             # Initialize a new run with WandB
             run = wandb.init(**wandb_kwargs)
 
-            _autoencoder2.set_params(callbacks= all_hyperparameters['callbacks'] + [WandbLogger(run)])
+            _autoencoder2.set_params(callbacks= all_hyperparameters['callbacks'] + [WandbLogger(run, save_model=save_model)])
 
             for i, (train_x, train_y, val_x, val_y) in enumerate(
                     zip(self.feature_dataset.data.X.train_folds, self.feature_dataset.data.y.train_folds,
@@ -120,6 +120,8 @@ def clean_dict_for_json(d):
         if is_jsonable(value):
             # If the value is already serializable, add it to the cleaned dictionary as-is
             cleaned_dict[key] = value
+        elif hasattr(value, "__name__"):
+            cleaned_dict[key] = value.__name__
         else:
             # If the value is not serializable and has no '__repr__', replace it with a placeholder
             cleaned_dict[key] = str(type(value))
