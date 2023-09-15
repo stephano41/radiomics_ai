@@ -11,7 +11,7 @@ from torch.nn import init
 import math
 
 from .base_vae import BaseVAE
-from typing import List
+from typing import List, Tuple
 from .initialisations import he_init
 
 
@@ -118,10 +118,10 @@ class ResnetVAE(BaseVAE):
         eps = torch.randn_like(std)
         return eps * std + mu
 
-    def forward(self, input: Tensor, **kwargs) -> List[Tensor]:
+    def forward(self, input: Tensor, **kwargs) -> Tuple[Tensor, ...]:
         mu, log_var = self.encode(input)
         z = self.reparameterize(mu, log_var)
-        return [self.decode(z), input, mu, log_var]
+        return (self.decode(z), input, mu, log_var)
 
     def loss_function(self,
                       *args,
@@ -178,7 +178,7 @@ class conv_block(nn.Module):
     def __init__(self, ch_in, ch_out, k_size, stride=1, p=1, num_groups=1):
         super(conv_block, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv3d(ch_in, ch_out, kernel_size=k_size, stride=stride, padding=p),
+            nn.Conv3d(ch_in, ch_out, kernel_size=k_size, stride=stride, padding=p, groups=num_groups),
             nn.BatchNorm3d(ch_out),
             nn.ReLU(inplace=True),
         )
@@ -194,11 +194,11 @@ class ResNet_block(nn.Module):
     def __init__(self, ch, k_size, stride=1, p=1, num_groups=1):
         super(ResNet_block, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv3d(ch, ch, kernel_size=k_size, stride=stride, padding=p),
+            nn.Conv3d(ch, ch, kernel_size=k_size, stride=stride, padding=p, groups=num_groups),
             nn.BatchNorm3d(ch),
             nn.ReLU(inplace=True),
 
-            nn.Conv3d(ch, ch, kernel_size=k_size, stride=stride, padding=p),
+            nn.Conv3d(ch, ch, kernel_size=k_size, stride=stride, padding=p, groups=num_groups),
             nn.BatchNorm3d(ch),
             nn.ReLU(inplace=True),
         )

@@ -7,7 +7,7 @@ import torch
 from sklearn.base import TransformerMixin
 
 from skorch import NeuralNet
-from skorch.utils import to_device, to_tensor
+from skorch.utils import to_device, to_tensor, to_numpy
 
 from src.dataset import SitkImageTransformer
 
@@ -29,18 +29,22 @@ class Encoder(NeuralNet, TransformerMixin):
 
     def transform(self, X, y=None):
         with torch.no_grad():
-            data_x = to_device((dfsitk2tensor(X) - self._mean) / self._std, self.device)
+            # data_x = to_device((dfsitk2tensor(X) - self._mean) / self._std, self.device)
 
-            mu, log_var = self.module_.encode(data_x)
+            dataset = self.get_dataset(X)
+            iterator = self.get_iterator(dataset, training=False)
+            results = []
+            for Xi, _ in iterator:
 
-            result = self.module_.reparameterize(mu, log_var).detach()
-            if self.output_format == 'tensor':
-                return result
-            elif self.output_format == 'numpy':
-                return result.numpy()
+                mu, log_var = self.module_.encode(to_device((Xi - self._mean) / self._std, self.device))
+                results.append(to_numpy(self.module_.reparameterize(mu, log_var)))
+
+            results = np.concatenate(results, 0)
+            if self.output_format == 'numpy':
+                return results
             elif self.output_format == 'pandas':
-                return pd.DataFrame(result, columns=[f"{type(self.module_).__name__}_dl_feature_{i}" for i in
-                                                     range(result.shape[1])])
+                return pd.DataFrame(results, columns=[f"{type(self.module_).__name__}_dl_feature_{i}" for i in
+                                                     range(results.shape[1])])
             else:
                 raise ValueError(f"set_output method not implemented, got {self.output_format}")
 
@@ -70,17 +74,55 @@ class Encoder(NeuralNet, TransformerMixin):
 
         return self.get_dataset(train_x, train_x), self.get_dataset(valid_x, valid_x)
 
-    def evaluation_step(self, batch, training=False):
-        return super().evaluation_step((batch - self._mean) / self._std, training)
-
     def get_feature_names_out(self):
         pass
 
     def generate(self, x):
-        with torch.no_grad():
-            x = to_device((dfsitk2tensor(x) - self._mean) / self._std, self.device)
-            output = to_device(self.module_.generate(x), 'cpu').detach()
-            return (output * self._std + self._mean).numpy()
+        return self.predict_proba(x)
+
+    # def predict_proba(self, X):
+    #     """Return the output of the module's forward method as a numpy
+    #     array.
+    #
+    #     If the module's forward method returns multiple outputs as a
+    #     tuple, it is assumed that the first output contains the
+    #     relevant information and the other values are ignored. If all
+    #     values are relevant, consider using
+    #     :func:`~skorch.NeuralNet.forward` instead.
+    #
+    #     Parameters
+    #     ----------
+    #     X : input data, compatible with skorch.dataset.Dataset
+    #       By default, you should be able to pass:
+    #
+    #         * numpy arrays
+    #         * torch tensors
+    #         * pandas DataFrame or Series
+    #         * scipy sparse CSR matrices
+    #         * a dictionary of the former three
+    #         * a list/tuple of the former three
+    #         * a Dataset
+    #
+    #       If this doesn't work with your data, you have to pass a
+    #       ``Dataset`` that can deal with the data.
+    #
+    #     Returns
+    #     -------
+    #     y_proba : numpy ndarray
+    #
+    #     """
+    #     nonlin = self._get_predict_nonlinearity()
+    #     y_probas = []
+    #     for yp in self.forward_iter(X, training=False):
+    #         yp = yp[0] if isinstance(yp, tuple) else yp
+    #         yp = nonlin(yp)
+    #         y_probas.append(to_numpy(yp))
+    #     y_proba = np.concatenate(y_probas, 0)
+    #     return y_proba
+
+    def predict_proba(self, X):
+        y_proba = super().predict_proba((dfsitk2tensor(X) - self._mean) / self._std)
+        return y_proba * to_numpy(self._std) + to_numpy(self._mean)
 
     def get_loss(self, y_pred, y_true, X=None, training=False):
         """Return the loss for this batch.

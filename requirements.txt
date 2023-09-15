@@ -10,6 +10,8 @@ ray
 dipy
 skorch
 wandb
+torchio
+monai
 
 --find-links https://download.pytorch.org/whl/cu117
 torch

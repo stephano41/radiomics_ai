@@ -1,27 +1,26 @@
 import os
+import pickle
 from datetime import datetime
 
 import numpy as np
 import torch.optim
+import torchio as tio
 from sklearn import clone
-from sklearn.pipeline import Pipeline
-from skorch.helper import SkorchDoctor
-from skorch.callbacks import EarlyStopping, GradientNormClipping, Checkpoint
+from skorch.callbacks import EarlyStopping, GradientNormClipping
+from tqdm import tqdm
 
-from src.dataset import SitkImageProcessor
-from src.evaluation import bootstrap
-from src.models import MLClassifier
-from src.models.autoencoder import Encoder, VanillaVAE, VAELoss, MSSIM, LogCashLoss, BetaVAELoss
+from src.dataset.dl_dataset import get_tio_dataset, SitkImageProcessor
+from src.models.autoencoder import VanillaVAE, Encoder, MSSIM, BetaVAELoss
 from src.models.autoencoder.nn_encoder import dfsitk2tensor
 from src.models.autoencoder.resnet_vae import ResnetVAE
-from src.models.callbacks import SimpleLoadInitState
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
-
+from pqdm.threads import pqdm
 from src.training import Trainer, EncoderTrainer
 from src.utils.infer_utils import get_pipeline_from_last_run
-
+from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
+from torch.utils.data import DataLoader
 
 def plot_debug(stk_image):
     plt.figure()
@@ -67,120 +66,6 @@ def plot_slices(output_tensor, slice_index, num_samples=5, original_tensor=None,
 
         plt.show()
 
-output_dir = './outputs/meningioma/2023-09-01-01-32-46'
-# dataset = get_data('./data/meningioma_data', 't1ce', 'mask')
-# sitk_images = get_sitk_images(dataset, n_jobs=5)
-
-# setup dataset, extract features, split the data
-feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_data',
-                                                 image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
-                                                 mask_stem='mask',
-                                                 target_column='Grade',
-                                                 label_csv_path='./data/meningioma_meta.csv',
-                                                 extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
-                                                 feature_df_merger={'_target_': 'src.pipeline.df_mergers.meningioma_df_merger'},
-                                                 n_jobs=6,
-                                                 existing_feature_df= os.path.join(output_dir, 'extracted_features.csv'),
-                                                 additional_features=['ID']
-                                                 )
-
-# feature_dataset.df.to_csv("./outputs/meningioma_feature_dataset.csv")
-
-feature_dataset = split_feature_dataset(feature_dataset,
-                                        existing_split=os.path.join(output_dir,'splits.yml'))
-
-# models = MLClassifier.initialize_default_sklearn_models()
-
-# run auto preprocessing
-# run_auto_preprocessing(data=feature_dataset.data,
-#                        result_dir=Path(output_dir),
-#                        use_oversampling= False,
-#                        feature_selection_methods=['anova', 'lasso'],
-#                        use_feature_selection=True,
-#                        autoencoder={'_target_': 'sklearn.pipeline.make_pipeline',
-#                                     '_args_':[
-#                                         {'_target_': 'src.dataset.dl_dataset.SitkImageProcessor',
-#                                          'result_dir': './outputs',
-#                                          'data_dir': './data/meningioma_data',
-#                                          'image_stems': ('registered_adc', 't2', 'flair', 't1', 't1ce'),
-#                                          'mask_stem': 'mask',
-#                                          'n_jobs': 6},
-#                                         {'_target_': 'src.models.autoencoder.nn_encoder.Encoder',
-#                                          'module': 'vanillavae',
-#                                          'module__in_channels': 5,
-#                                          'module__latent_dim': 256,
-#                                          'module__hidden_dims':[16,32, 64],
-#                                          'module__finish_size': 2,
-#                                          'std_dim':[0, 2, 3, 4],
-#                                          'max_epochs': 10,
-#                                          'output_format': 'pandas'}]}
-# )
-sitk_processor = SitkImageProcessor('./outputs', './data/meningioma_data', mask_stem='mask',
-                                    image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=6)
-
-encoder = Encoder(ResnetVAE,
-                  module__in_channels=5,
-                  module__latent_dim=128,
-                  module__hidden_dims=[32, 64, 128],
-                  module__finish_size=2,
-                  criterion=MSSIM,
-                  std_dim=(0, 2, 3, 4),
-                  max_epochs=200,
-                  output_format='pandas',
-                  callbacks=[EarlyStopping(load_best=True),
-                             GradientNormClipping(1),
-                             # SimpleLoadInitState(f_optimizer='outputs/saved_models/optimizer.pt',
-                             #                     f_params='outputs/saved_models/params.pt')
-                             ],
-                  optimizer=torch.optim.AdamW,
-                  lr=0.0001,
-                  # criterion__loss_type='B',
-                  # criterion__gamma=10.0,
-                  # criterion__max_capacity=1,
-
-                  # criterion__alpha=10.0,
-                  # criterion__beta=1.0
-                  criterion__in_channels=5,
-                  criterion__window_size=4,
-                  transform_kwargs=dict(thetaX=(-90, 90),
-                                        thetaY=(-90, 90),
-                                        thetaZ=(-90, 90),
-                                        tx=(-1, 1),
-                                        ty=(-1, 1),
-                                        tz=(-1, 1),
-                                        scale=(1, 1),
-                                        n=10),
-                  device='cuda'
-                  )
-
-# param_grid = {
-#     "module__latent_dim": [128, 256, 512, 1024],
-#     'lr': [0.01, 0.001, 0.0001],
-#     # 'criterion__beta': [],
-#     'criterion__gamma': [10, 100, 1000, 10000],
-#     'criterion__kld_weight': [0.001, 0.01, 0.0001],
-#     'criterion__max_capacity': [0,5,10,20,40]
-#
-# }
-#
-# trainer = EncoderTrainer(encoder, param_grid, feature_dataset,sitk_processor)
-# trainer.run(wandb_kwargs={'project': 'autoencoder_tuning',
-#                           'dir': './outputs',
-#                           # 'mode': 'off'
-#                           })
-
-for i, (train_x, train_y, val_x, val_y) in enumerate(zip(feature_dataset.data.X.train_folds, feature_dataset.data.y.train_folds, feature_dataset.data.X.val_folds, feature_dataset.data.y.val_folds)):
-    # _encoder = type(encoder)(**encoder.get_params())
-    _encoder = clone(encoder)
-
-    images = sitk_processor.fit_transform(train_x['ID'])
-    _encoder.fit(images)
-
-    generated_images = _encoder.generate(images)
-
-    plot_slices(generated_images, 8, 2, original_tensor=dfsitk2tensor(images), title=datetime.now().strftime(f"%Y%m%d%H%M%S-fold{i}"))
-
-    break
 
 
 # encoder.save_params(f_params='outputs/saved_models/params.pt', f_optimizer='outputs/saved_models/optimizer.pt', f_history='outputs/saved_models/history.json')
@@ -210,3 +95,82 @@ for i, (train_x, train_y, val_x, val_y) in enumerate(zip(feature_dataset.data.X.
 #
 # pipeline.fit(feature_dataset.X.loc[idx], feature_dataset.y.loc[idx])
 
+output_dir = './outputs/meningioma/2023-09-01-01-32-46'
+# dataset = get_data('./data/meningioma_data', 't1ce', 'mask')
+# sitk_images = get_sitk_images(dataset, n_jobs=5)
+
+# setup dataset, extract features, split the data
+feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_data',
+                                                 image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
+                                                 mask_stem='mask',
+                                                 target_column='Grade',
+                                                 label_csv_path='./data/meningioma_meta.csv',
+                                                 extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
+                                                 feature_df_merger={'_target_': 'src.pipeline.df_mergers.meningioma_df_merger'},
+                                                 n_jobs=6,
+                                                 existing_feature_df= os.path.join(output_dir, 'extracted_features.csv'),
+                                                 additional_features=['ID']
+                                                 )
+
+# feature_dataset.df.to_csv("./outputs/meningioma_feature_dataset.csv")
+
+feature_dataset = split_feature_dataset(feature_dataset,
+                                        existing_split=os.path.join(output_dir,'splits.yml'))
+
+
+sitk_processor = SitkImageProcessor('./outputs', './data/meningioma_data', mask_stem='mask',
+                                    image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=3, target_size=(64,64,64))
+encoder = Encoder(ResnetVAE,
+                  module__in_channels=5,
+                  module__latent_dim=1024,
+                  module__hidden_dims=[32, 64, 128, 256, 512],
+                  module__finish_size=2,
+                  criterion=BetaVAELoss,
+                  std_dim=(0, 2, 3, 4),
+                  max_epochs=200,
+                  output_format='pandas',
+                  callbacks=[EarlyStopping(load_best=True),
+                             GradientNormClipping(1),
+                             # SimpleLoadInitState(f_optimizer='outputs/saved_models/optimizer.pt',
+                             #                     f_params='outputs/saved_models/params.pt')
+                             ],
+                  optimizer=torch.optim.AdamW,
+                  batch_size=4,
+                  lr=0.001,
+                  criterion__loss_type='B',
+                  # criterion__gamma=10.0,
+                  # criterion__max_capacity=1,
+
+                  # criterion__alpha=10.0,
+                  # criterion__beta=1.0
+                  # criterion__in_channels=5,
+                  # criterion__window_size=4,
+                  criterion__kld_weight=0.001,
+                  # criterion__finish_size=2,
+                  transform_kwargs=dict(thetaX=(-90, 90),
+                                        thetaY=(-90, 90),
+                                        thetaZ=(-90, 90),
+                                        tx=(-2, 2),
+                                        ty=(-2, 2),
+                                        tz=(-2, 2),
+                                        scale=(1, 1),
+                                        n=5),
+                  device='cuda'
+                  )
+for i, (train_x, train_y, val_x, val_y) in enumerate(zip(feature_dataset.data.X.train_folds, feature_dataset.data.y.train_folds, feature_dataset.data.X.val_folds, feature_dataset.data.y.val_folds)):
+    # _encoder = type(encoder)(**encoder.get_params())
+    _encoder = clone(encoder)
+
+    images = sitk_processor.fit_transform(train_x['ID'])
+    _encoder.fit(images)
+
+    generated_images = _encoder.generate(images)
+
+    plot_slices(generated_images, 32, 2, original_tensor=dfsitk2tensor(images), title=datetime.now().strftime(f"%Y%m%d%H%M%S-fold{i}"))
+
+# data_processor = SitkImageProcessor('./outputs', './data/meningioma_data',
+#                                     image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
+#                                     mask_stem='mask',
+#                                     n_jobs=2
+#                                     )
+print('done')
