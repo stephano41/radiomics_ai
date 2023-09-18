@@ -49,7 +49,7 @@ class SitkImageTransformer:
 
 class SitkImageProcessor(BaseEstimator, TransformerMixin):
     def __init__(self, result_dir, data_dir, image_stems: Tuple[str, ...] = ('image'), mask_stem='mask', n_jobs=2,
-                 target_size=(96, 96, 96), resample_pixel_spacing=(1, 1, 1)):
+                 target_size=(96, 96, 96), resample_pixel_spacing=(1, 1, 1), mask_label=1):
         self.n_jobs = n_jobs
         self.target_size = target_size
         self.data_dir = data_dir
@@ -57,6 +57,7 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
         self.result_dir = result_dir
         self.image_stems = image_stems
         self.resample_pixel_spacing = resample_pixel_spacing
+        self.mask_label = mask_label
         # self.set_output = set_output
 
         self.paths_df = get_multi_paths_with_separate_folder_per_case(data_dir=data_dir,
@@ -66,8 +67,8 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
 
         self.saved_df = None
 
-        if not self.get_cache_path.exists():
-            self.saved_df = self.extract_data(self.paths_df)
+        # if not self.get_cache_path.exists():
+        #     self.saved_df = self.extract_data(self.paths_df)
 
     @property
     def get_cache_path(self):
@@ -88,28 +89,22 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
 
         return filtered_df.loc[:, filtered_df.columns != 'ID']
 
+    @property
+    def image_column_names(self):
+        return [f"image_{name}" for name in self.image_stems]
+
     def extract_data(self, df):
         print(f"extracting at {self.get_cache_path} cached path")
-        image_column_names = [f"image_{name}" for name in self.image_stems]
 
         prepro_transforms = tio.Compose([tio.Resample(target=self.resample_pixel_spacing),
-                                         tio.CropOrPad(mask_name='mask'),
+                                         tio.ToCanonical(),
+                                         tio.Mask(masking_method='mask', outside_value=0),
                                          tio.CropOrPad(target_shape=self.target_size, mask_name='mask'),
+                                         tio.RescaleIntensity(masking_method='mask')
                                          # tio.ZNormalization(masking_method=mask_label)
                                          ])
 
-        subjects = []
-
-        for _, row in tqdm(self.paths_df.iterrows()):
-            images = row.loc[row.index.isin(image_column_names)].to_dict()
-
-            subjects.append(tio.Subject(
-                ID=row.ID,
-                mask=tio.LabelMap(row.segmentation_path),
-                **{k: tio.ScalarImage(v) for k, v in images.items()}
-            ))
-
-        subject_dataset = SubjectsDataset(subjects, transform=prepro_transforms)
+        subject_dataset = SubjectsDataset(self.get_subjects_list(), transform=prepro_transforms)
 
         subjects = pqdm(range(len(subject_dataset)), subject_dataset.__getitem__, n_jobs=self.n_jobs)
 
@@ -124,6 +119,20 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
 
 
         return x_df
+
+    def get_subjects_list(self):
+        subjects = []
+
+        for _, row in tqdm(self.paths_df.iterrows()):
+            images = row.loc[row.index.isin(self.image_column_names)].to_dict()
+
+            subjects.append(tio.Subject(
+                ID=row.ID,
+                mask=tio.LabelMap(row.segmentation_path),
+                **{k: tio.ScalarImage(v) for k, v in images.items()}
+            ))
+
+        return subjects
 
     def process1subject(self, row, transform, image_column_names):
         images = row.loc[row.index.isin(image_column_names)].to_dict()
@@ -226,37 +235,5 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
         pass
 
 
-def get_tio_dataset(data_dir, image_stems: Tuple[str, ...] = ('image'), mask_stem='mask', target_shape=(96, 96, 96),
-                    resample_pixel_spacing=(1, 1, 1)):
-    paths_df = get_multi_paths_with_separate_folder_per_case(data_dir=data_dir,
-                                                             image_stems=image_stems,
-                                                             mask_stem=mask_stem,
-                                                             relative=False)
-    image_column_names = [f"image_{name}" for name in image_stems]
-
-    subjects = []
-
-    for _, row in paths_df.iterrows():
-        images = row.loc[row.index.isin(image_column_names)].to_dict()
-        subjects.append(tio.Subject(
-            ID=row.ID,
-            mask=tio.LabelMap(row.segmentation_path),
-            **{k: tio.ScalarImage(v) for k, v in images.items()}
-        ))
-
-    prepro_transforms = tio.Compose([tio.Resample(target=resample_pixel_spacing),
-                                     tio.CropOrPad(mask_name='mask'),
-                                     tio.CropOrPad(target_shape=target_shape, mask_name='mask'),
-                                     # tio.ZNormalization(masking_method=mask_label)
-                                     ])
-
-    return tio.SubjectsDataset(subjects, transform=prepro_transforms, load_getitem=True)
-
-
 # https://github.com/skorch-dev/skorch/blob/master/notebooks/Transfer_Learning.ipynb
 # https://github.com/skorch-dev/skorch/blob/master/examples/nuclei_image_segmentation/Nuclei_Image_Segmentation.ipynb
-
-def get_max_shape(subjects):
-    dataset = tio.SubjectsDataset(subjects)
-    shapes = np.array([s.spatial_shape for s in dataset])
-    return shapes.max(axis=0)

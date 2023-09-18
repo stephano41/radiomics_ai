@@ -22,8 +22,8 @@ class Encoder(NeuralNet, TransformerMixin):
         self.image_augmenter = image_augmenter
         self.output_format = output_format
 
-        self._mean = 0
-        self._std = 1
+        self._mean = torch.tensor(0)
+        self._std = torch.tensor(1)
 
         super().__init__(**preprocess_kwargs(module=module, **kwargs))
 

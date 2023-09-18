@@ -5,14 +5,21 @@ from datetime import datetime
 import numpy as np
 import torch.optim
 import torchio as tio
+from monai.networks.nets import SegResNetVAE
 from sklearn import clone
+from skorch import NeuralNet
 from skorch.callbacks import EarlyStopping, GradientNormClipping
+from torchio import SubjectsDataset
 from tqdm import tqdm
 
-from src.dataset.dl_dataset import get_tio_dataset, SitkImageProcessor
+from src.dataset.dl_dataset import SitkImageProcessor
+from src.dataset.skorch_subject_ds import SkorchSubjectsDataset
+from src.dataset.transforming_dataloader import TransformingDataLoader
 from src.models.autoencoder import VanillaVAE, Encoder, MSSIM, BetaVAELoss
+from src.models.autoencoder.loss_funcs import PassThroughLoss
 from src.models.autoencoder.nn_encoder import dfsitk2tensor
 from src.models.autoencoder.resnet_vae import ResnetVAE
+from src.models.autoencoder.segresnet import SegResNetVAE2
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
@@ -22,6 +29,7 @@ from src.utils.infer_utils import get_pipeline_from_last_run
 from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 from torch.utils.data import DataLoader
 
+
 def plot_debug(stk_image):
     plt.figure()
     plt.imshow(sitk.GetArrayFromImage(stk_image)[5, :, :], cmap='gray')
@@ -29,7 +37,7 @@ def plot_debug(stk_image):
 
 
 def plot_slices(output_tensor, slice_index, num_samples=5, original_tensor=None,
-                title=None):
+                title=None, save_dir=None):
     """
     Plot a slice from each image modality of the output tensor for a specified number of samples.
 
@@ -56,20 +64,20 @@ def plot_slices(output_tensor, slice_index, num_samples=5, original_tensor=None,
 
         if original_tensor is not None:
             for modality_idx in range(num_modalities):
-                plt.subplot(2, num_modalities, num_modalities+ modality_idx + 1)
+                plt.subplot(2, num_modalities, num_modalities + modality_idx + 1)
                 plt.imshow(original_tensor[sample_idx, modality_idx, slice_index, :, :], cmap='gray')
                 plt.title(f'original Sample {sample_idx + 1}, {modality_idx}')
                 plt.axis('off')
 
         if title is not None:
             plt.suptitle(title)
+        if save_dir is not None:
+            plt.savefig(save_dir)
 
         plt.show()
 
 
-
 # encoder.save_params(f_params='outputs/saved_models/params.pt', f_optimizer='outputs/saved_models/optimizer.pt', f_history='outputs/saved_models/history.json')
-
 
 
 # print(generated_images)
@@ -106,67 +114,107 @@ feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_dat
                                                  target_column='Grade',
                                                  label_csv_path='./data/meningioma_meta.csv',
                                                  extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
-                                                 feature_df_merger={'_target_': 'src.pipeline.df_mergers.meningioma_df_merger'},
+                                                 feature_df_merger={
+                                                     '_target_': 'src.pipeline.df_mergers.meningioma_df_merger'},
                                                  n_jobs=6,
-                                                 existing_feature_df= os.path.join(output_dir, 'extracted_features.csv'),
+                                                 existing_feature_df=os.path.join(output_dir, 'extracted_features.csv'),
                                                  additional_features=['ID']
                                                  )
 
 # feature_dataset.df.to_csv("./outputs/meningioma_feature_dataset.csv")
 
 feature_dataset = split_feature_dataset(feature_dataset,
-                                        existing_split=os.path.join(output_dir,'splits.yml'))
-
+                                        existing_split=os.path.join(output_dir, 'splits.yml'))
 
 sitk_processor = SitkImageProcessor('./outputs', './data/meningioma_data', mask_stem='mask',
-                                    image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=3, target_size=(64,64,64))
-encoder = Encoder(ResnetVAE,
-                  module__in_channels=5,
-                  module__latent_dim=1024,
-                  module__hidden_dims=[32, 64, 128, 256, 512],
-                  module__finish_size=2,
-                  criterion=BetaVAELoss,
-                  std_dim=(0, 2, 3, 4),
-                  max_epochs=200,
-                  output_format='pandas',
-                  callbacks=[EarlyStopping(load_best=True),
-                             GradientNormClipping(1),
-                             # SimpleLoadInitState(f_optimizer='outputs/saved_models/optimizer.pt',
-                             #                     f_params='outputs/saved_models/params.pt')
-                             ],
-                  optimizer=torch.optim.AdamW,
-                  batch_size=4,
-                  lr=0.001,
-                  criterion__loss_type='B',
-                  # criterion__gamma=10.0,
-                  # criterion__max_capacity=1,
+                                    image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=3,
+                                    target_size=(64, 64, 64))
 
-                  # criterion__alpha=10.0,
-                  # criterion__beta=1.0
-                  # criterion__in_channels=5,
-                  # criterion__window_size=4,
-                  criterion__kld_weight=0.001,
-                  # criterion__finish_size=2,
-                  transform_kwargs=dict(thetaX=(-90, 90),
-                                        thetaY=(-90, 90),
-                                        thetaZ=(-90, 90),
-                                        tx=(-2, 2),
-                                        ty=(-2, 2),
-                                        tz=(-2, 2),
-                                        scale=(1, 1),
-                                        n=5),
-                  device='cuda'
-                  )
-for i, (train_x, train_y, val_x, val_y) in enumerate(zip(feature_dataset.data.X.train_folds, feature_dataset.data.y.train_folds, feature_dataset.data.X.val_folds, feature_dataset.data.y.val_folds)):
-    # _encoder = type(encoder)(**encoder.get_params())
-    _encoder = clone(encoder)
+subject_list = sitk_processor.get_subjects_list()
 
-    images = sitk_processor.fit_transform(train_x['ID'])
-    _encoder.fit(images)
+encoder = NeuralNet(SegResNetVAE2,
+                    module__input_image_size=[64, 64, 64],
+                    module__spatial_dims=3,
+                    module__in_channels=5,
+                    module__out_channels=5,
+                    # module__in_channels=5,
+                    # module__latent_dim=128,
+                    # module__hidden_dims=, [32, 64, 128],
+                    # module__finish_size=8,
+                    # output_format='pandas',
+                    # std_dim=(0, 2, 3, 4),
+                    criterion=PassThroughLoss,
+                    max_epochs=200,
+                    callbacks=[EarlyStopping(load_best=True),
+                               GradientNormClipping(1),
+                               # SimpleLoadInitState(f_optimizer='outputs/saved_models/optimizer.pt',
+                               #                     f_params='outputs/saved_models/params.pt')
+                               ],
+                    optimizer=torch.optim.AdamW,
+                    batch_size=8,
+                    lr=0.001,
+                    # criterion__loss_type='B',
+                    # standardise=False,
+                    iterator_train=TransformingDataLoader,
+                    iterator_train__augment_transforms=tio.Compose([tio.RandomBlur(std=0.1, label_keys='mask'),
+                                                                    tio.RandomAffine(p=0.5, label_keys='mask',
+                                                                                     scales=0.1, degrees=0,
+                                                                                     translation=0, isotropic=True),
+                                                                    tio.RandomFlip(flip_probability=0.5,
+                                                                                   label_keys='mask', axes=(0, 1, 2))
+                                                                    ]),
+                    iterator_train__num_workers=6,
+                    iterator_valid__num_workers=6,
+                    dataset=SkorchSubjectsDataset,
+                    dataset__transform=tio.Compose([tio.Resample((1, 1, 1)),
+                                                    tio.ToCanonical(),
+                                                    tio.Mask(masking_method='mask', outside_value=0),
+                                                    tio.CropOrPad(target_shape=(64, 64, 64), mask_name='mask'),
+                                                    tio.ZNormalization(masking_method='mask')]),
+                    # criterion__gamma=10.0,
+                    # criterion__max_capacity=1,
 
-    generated_images = _encoder.generate(images)
+                    # criterion__alpha=10.0,
+                    # criterion__beta=1.0
+                    # criterion__in_channels=5,
+                    # criterion__window_size=4,
+                    # criterion__kld_weight=0.001,
+                    # criterion__finish_size=2,
+                    # transform_kwargs=dict(thetaX=(-90, 90),
+                    #                       thetaY=(-90, 90),
+                    #                       thetaZ=(-90, 90),
+                    #                       tx=(-2, 2),
+                    #                       ty=(-2, 2),
+                    #                       tz=(-2, 2),
+                    #                       scale=(1, 1),
+                    #                       n=6),
+                    device='cuda'
+                    )
 
-    plot_slices(generated_images, 32, 2, original_tensor=dfsitk2tensor(images), title=datetime.now().strftime(f"%Y%m%d%H%M%S-fold{i}"))
+encoder.fit(subject_list)
+
+generated_images = encoder.predict(subject_list[:2])
+
+subject_dataset = SubjectsDataset(subject_list[:2], transform=tio.Compose([tio.Resample((1, 1, 1)),
+                                                    tio.ToCanonical(),
+                                                    tio.Mask(masking_method='mask', outside_value=0),
+                                                    tio.CropOrPad(target_shape=(64, 64, 64), mask_name='mask'),
+                                                    tio.ZNormalization(masking_method='mask')]))
+
+original_images = torch.stack(
+    [torch.concatenate([i.data for i in subject.get_images()]) for subject in subject_dataset])
+plot_slices(generated_images, original_tensor=original_images, slice_index=32, num_samples=2, title=datetime.now().strftime(f"%Y%m%d%H%M%S"),
+            save_dir=f'outputs/generated_images/{datetime.now().strftime(f"%Y%m%d%H%M%S")}.png')
+# for i, (train_x, train_y, val_x, val_y) in enumerate(zip(feature_dataset.data.X.train_folds, feature_dataset.data.y.train_folds, feature_dataset.data.X.val_folds, feature_dataset.data.y.val_folds)):
+#     # _encoder = type(encoder)(**encoder.get_params())
+#     _encoder = clone(encoder)
+#
+#     images = sitk_processor.fit_transform(train_x['ID'])
+#     _encoder.fit(images)
+#
+#     generated_images = _encoder.generate(images)
+#
+#     plot_slices(generated_images, 32, 2, original_tensor=dfsitk2tensor(images), title=datetime.now().strftime(f"%Y%m%d%H%M%S-fold{i}"))
 
 # data_processor = SitkImageProcessor('./outputs', './data/meningioma_data',
 #                                     image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
