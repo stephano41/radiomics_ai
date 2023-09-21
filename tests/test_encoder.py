@@ -2,7 +2,7 @@ from sklearn.datasets import load_digits
 import torch
 from skorch.callbacks import PassthroughScoring, PrintLog, EarlyStopping
 from src.models.autoencoder import VanillaVAE
-from src.models.encoder import Encoder, VAELoss
+from src.models.autoencoder import Encoder, VAELoss
 
 
 def test_encoder():

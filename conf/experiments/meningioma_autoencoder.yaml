@@ -2,7 +2,7 @@
 
 defaults:
     - meningioma.yaml
-    - /autoencoder@preprocessing.autoencoder: vae
+    - /autoencoder@preprocessing.autoencoder: resnetsegvae
     - _self_
 
 name: meningioma+autoencoder
