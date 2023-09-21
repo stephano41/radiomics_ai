@@ -1,33 +1,20 @@
 import os
-import pickle
 from datetime import datetime
 
-import numpy as np
 import torch.optim
 import torchio as tio
-from monai.networks.nets import SegResNetVAE
-from sklearn import clone
 from skorch import NeuralNet
-from skorch.callbacks import EarlyStopping, GradientNormClipping
+from skorch.callbacks import EarlyStopping, GradientNormClipping, PassthroughScoring
 from torchio import SubjectsDataset
-from tqdm import tqdm
 
 from src.dataset.dl_dataset import SitkImageProcessor
 from src.dataset.skorch_subject_ds import SkorchSubjectsDataset
 from src.dataset.transforming_dataloader import TransformingDataLoader
-from src.models.autoencoder import VanillaVAE, Encoder, MSSIM, BetaVAELoss
-from src.models.autoencoder.loss_funcs import PassThroughLoss
-from src.models.autoencoder.nn_encoder import dfsitk2tensor
-from src.models.autoencoder.resnet_vae import ResnetVAE
-from src.models.autoencoder.segresnet import SegResNetVAE2
+from src.models.autoencoder import SegResNetVAE2, VAELoss, BetaVAELoss, MSSIM, Encoder
+from src.models.loss_funcs import PassThroughLoss
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
-from pqdm.threads import pqdm
-from src.training import Trainer, EncoderTrainer
-from src.utils.infer_utils import get_pipeline_from_last_run
-from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
-from torch.utils.data import DataLoader
 
 
 def plot_debug(stk_image):
@@ -72,7 +59,7 @@ def plot_slices(output_tensor, slice_index, num_samples=5, original_tensor=None,
         if title is not None:
             plt.suptitle(title)
         if save_dir is not None:
-            plt.savefig(save_dir)
+            plt.savefig(f'{save_dir}_{sample_idx}.png')
 
         plt.show()
 
@@ -126,35 +113,30 @@ feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_dat
 feature_dataset = split_feature_dataset(feature_dataset,
                                         existing_split=os.path.join(output_dir, 'splits.yml'))
 
-sitk_processor = SitkImageProcessor('./outputs', './data/meningioma_data', mask_stem='mask',
-                                    image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=3,
-                                    target_size=(64, 64, 64))
+sitk_processor = SitkImageProcessor('./data/meningioma_data', mask_stem='mask',
+                                    image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'))
 
-subject_list = sitk_processor.get_subjects_list()
+subject_list = sitk_processor.subject_list
 
-encoder = NeuralNet(SegResNetVAE2,
+encoder = Encoder(SegResNetVAE2,
                     module__input_image_size=[64, 64, 64],
                     module__spatial_dims=3,
                     module__in_channels=5,
                     module__out_channels=5,
-                    # module__in_channels=5,
-                    # module__latent_dim=128,
-                    # module__hidden_dims=, [32, 64, 128],
-                    # module__finish_size=8,
+                    module__dropout_prob=0.2,
+                    module__init_filters=32,
                     # output_format='pandas',
-                    # std_dim=(0, 2, 3, 4),
-                    criterion=PassThroughLoss,
+                    criterion=BetaVAELoss,
                     max_epochs=200,
                     callbacks=[EarlyStopping(load_best=True),
                                GradientNormClipping(1),
+
                                # SimpleLoadInitState(f_optimizer='outputs/saved_models/optimizer.pt',
                                #                     f_params='outputs/saved_models/params.pt')
                                ],
                     optimizer=torch.optim.AdamW,
-                    batch_size=8,
+                    batch_size=4,
                     lr=0.001,
-                    # criterion__loss_type='B',
-                    # standardise=False,
                     iterator_train=TransformingDataLoader,
                     iterator_train__augment_transforms=tio.Compose([tio.RandomBlur(std=0.1, label_keys='mask'),
                                                                     tio.RandomAffine(p=0.5, label_keys='mask',
@@ -164,6 +146,7 @@ encoder = NeuralNet(SegResNetVAE2,
                                                                                    label_keys='mask', axes=(0, 1, 2))
                                                                     ]),
                     iterator_train__num_workers=6,
+                    iterator_train__shuffle=True,
                     iterator_valid__num_workers=6,
                     dataset=SkorchSubjectsDataset,
                     dataset__transform=tio.Compose([tio.Resample((1, 1, 1)),
@@ -178,24 +161,16 @@ encoder = NeuralNet(SegResNetVAE2,
                     # criterion__beta=1.0
                     # criterion__in_channels=5,
                     # criterion__window_size=4,
-                    # criterion__kld_weight=0.001,
-                    # criterion__finish_size=2,
-                    # transform_kwargs=dict(thetaX=(-90, 90),
-                    #                       thetaY=(-90, 90),
-                    #                       thetaZ=(-90, 90),
-                    #                       tx=(-2, 2),
-                    #                       ty=(-2, 2),
-                    #                       tz=(-2, 2),
-                    #                       scale=(1, 1),
-                    #                       n=6),
+                    criterion__kld_weight=0.1,
+                    # criterion__finish_size=8,
                     device='cuda'
                     )
 
 encoder.fit(subject_list)
 
-generated_images = encoder.predict(subject_list[:2])
+generated_images = encoder.predict(subject_list[:10])
 
-subject_dataset = SubjectsDataset(subject_list[:2], transform=tio.Compose([tio.Resample((1, 1, 1)),
+subject_dataset = SubjectsDataset(subject_list[:10], transform=tio.Compose([tio.Resample((1, 1, 1)),
                                                     tio.ToCanonical(),
                                                     tio.Mask(masking_method='mask', outside_value=0),
                                                     tio.CropOrPad(target_shape=(64, 64, 64), mask_name='mask'),
@@ -203,8 +178,8 @@ subject_dataset = SubjectsDataset(subject_list[:2], transform=tio.Compose([tio.R
 
 original_images = torch.stack(
     [torch.concatenate([i.data for i in subject.get_images()]) for subject in subject_dataset])
-plot_slices(generated_images, original_tensor=original_images, slice_index=32, num_samples=2, title=datetime.now().strftime(f"%Y%m%d%H%M%S"),
-            save_dir=f'outputs/generated_images/{datetime.now().strftime(f"%Y%m%d%H%M%S")}.png')
+plot_slices(generated_images, original_tensor=original_images, slice_index=32, num_samples=8, title=datetime.now().strftime(f"%Y%m%d%H%M%S"),
+            save_dir=f'outputs/generated_images/{datetime.now().strftime(f"%Y%m%d%H%M%S")}')
 # for i, (train_x, train_y, val_x, val_y) in enumerate(zip(feature_dataset.data.X.train_folds, feature_dataset.data.y.train_folds, feature_dataset.data.X.val_folds, feature_dataset.data.y.val_folds)):
 #     # _encoder = type(encoder)(**encoder.get_params())
 #     _encoder = clone(encoder)

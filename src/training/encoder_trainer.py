@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 from skorch.callbacks import WandbLogger
 
 from src.dataset import SitkImageProcessor
-from src.models.autoencoder.nn_encoder import dfsitk2tensor
 
 
 class EncoderTrainer:
@@ -64,10 +63,10 @@ class EncoderTrainer:
                 # Train the autoencoder
                 _autoencoder.fit(images)
 
-                generated_images = _autoencoder.generate(images)
+                generated_images = _autoencoder.predict(images[:num_samples])
 
                 # Log generated images
-                image_plots = plot_generated_images(generated_images, dfsitk2tensor(images), title=f"{str(params)}-fold-{i}",
+                image_plots = plot_generated_images(generated_images, images, title=f"{str(params)}-fold-{i}",
                                                     num_samples=num_samples, slice_index=slice_index)
 
                 run.log({f"generated_images_{i}_{k+1}":image_plot for k, image_plot in enumerate(image_plots)})

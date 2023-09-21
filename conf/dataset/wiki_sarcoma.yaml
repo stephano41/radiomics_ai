@@ -1,7 +1,0 @@
-# @package dataset
-_target_: src.dataset.WikiSarcoma
-data_path: ./data
-clinical_data_path: example_data/INFOclinical_STS.csv
-radiomic_params: ./conf/radiomic_params/Params.yaml
-extract_label: 255
-num_cpu: 2

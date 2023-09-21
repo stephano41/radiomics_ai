@@ -35,4 +35,4 @@ class BetaVAELoss(nn.Module):
         else:
             raise ValueError('Undefined loss type.')
 
-        return loss
+        return {'loss': loss, 'recons_loss': recons_loss, 'kld_loss': kld_loss}
