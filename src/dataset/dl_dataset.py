@@ -36,7 +36,7 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         # Expects X as list of id's to get or extract
         subjects_df = pd.DataFrame({'ID': [s.ID for s in self.subject_list], 'subjects': self.subject_list})
-        X_df = pd.DataFrame({'ID', X})
+        X_df = pd.DataFrame({'ID': X})
 
         filtered_df = X_df.merge(subjects_df, on='ID', how='left')
 

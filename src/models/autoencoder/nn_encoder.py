@@ -8,7 +8,7 @@ from sklearn.base import TransformerMixin
 from importlib import import_module
 
 from skorch import NeuralNet
-from skorch.callbacks import PassthroughScoring
+from skorch.callbacks import PassthroughScoring, PrintLog, EpochTimer
 from skorch.utils import to_device, to_tensor, to_numpy
 
 
@@ -83,10 +83,25 @@ class Encoder(NeuralNet, TransformerMixin):
 
     @property
     def _default_callbacks(self):
-        return super()._default_callbacks().append([
+        return [
+            ('epoch_timer', EpochTimer()),
+            ('train_loss', PassthroughScoring(
+                name='train_loss',
+                on_train=True,
+            )),
+            ('valid_loss', PassthroughScoring(
+                name='valid_loss',
+            )),
+            ('print_log', PrintLog()),
             ('valid_kld_loss', PassthroughScoring('kld_loss')),
             ('valid_recons_loss', PassthroughScoring('recons_loss'))
-        ])
+        ]
+
+        # default_callbacks = super()._default_callbacks()
+        # return default_callbacks.extend([
+        #     ('valid_kld_loss', PassthroughScoring('kld_loss')),
+        #     ('valid_recons_loss', PassthroughScoring('recons_loss'))
+        # ])
 
 
 def dfsitk2tensor(df):
@@ -111,6 +126,6 @@ def preprocess_kwargs(**kwargs):
         if isinstance(arg, str):
             module = '.'.join(arg.split('.')[:-1])
             name = arg.split('.')[-1]
-            _kwargs[k] = import_module(module, name)
+            _kwargs[k] = getattr(import_module(module, name), name)
 
     return _kwargs

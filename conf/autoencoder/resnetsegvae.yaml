@@ -14,6 +14,7 @@ _args_:
       module__out_channels: 5
       module__dropout_prob: 0.2
       module__init_filters: 32
+      batch_size: 4
       max_epochs: 200
       verbose: 0
       output_format: pandas
@@ -36,7 +37,7 @@ _args_:
               p: 0.5
               label_keys: mask
               scales: 0.1
-              degree: 0
+              degrees: 0
               translation: 0
               isotropic: True
             - _target_: torchio.RandomFlip
@@ -55,7 +56,7 @@ _args_:
               masking_method: mask
               outside_value: 0
             - _target_: torchio.CropOrPad
-              target_shape: [64,64,64],
+              target_shape: [64,64,64]
               mask_name: mask
             - _target_: torchio.ZNormalization
               masking_method: mask
