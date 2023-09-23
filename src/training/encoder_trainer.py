@@ -1,7 +1,9 @@
 import json
 import os
 import itertools
+from typing import Tuple
 
+import numpy as np
 import pandas as pd
 import wandb
 from sklearn import clone
@@ -11,19 +13,17 @@ from skorch import NeuralNet
 import matplotlib.pyplot as plt
 from skorch.callbacks import WandbLogger
 
-from src.dataset import SitkImageProcessor
+from src.preprocessing import SitkImageProcessor
 
 
 class EncoderTrainer:
-    def __init__(self, autoencoder: NeuralNet, param_grid, feature_dataset, image_reader=None):
+    def __init__(self, autoencoder: NeuralNet, param_grid, feature_dataset, data_dir, image_stems: Tuple[str, ...] = ('image'), mask_stem='mask'):
         self.autoencoder = autoencoder
         self.param_grid = param_grid
         self.feature_dataset = feature_dataset
-        self.image_reader =image_reader
 
-        if self.image_reader is None:
-            self.image_reader = SitkImageProcessor('./outputs', './data/meningioma_data', mask_stem='mask',
-                                    image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'), n_jobs=6)
+        self.image_reader = SitkImageProcessor(data_dir, mask_stem=mask_stem,
+                                    image_stems=image_stems)
 
     def run(self, wandb_kwargs, num_samples=5, slice_index=8, save_model=True):
         if wandb_kwargs.get('project', None) is not None:
@@ -65,8 +65,11 @@ class EncoderTrainer:
 
                 generated_images = _autoencoder.predict(images[:num_samples])
 
+                image_ds = _autoencoder.get_dataset(images)
+
                 # Log generated images
-                image_plots = plot_generated_images(generated_images, images, title=f"{str(params)}-fold-{i}",
+                image_plots = plot_generated_images(generated_images, np.stack([image_ds[sample][0].numpy() for sample in range(num_samples)]),
+                                                    title=f"{str(params)}-fold-{i}",
                                                     num_samples=num_samples, slice_index=slice_index)
 
                 run.log({f"generated_images_{i}_{k+1}":image_plot for k, image_plot in enumerate(image_plots)})

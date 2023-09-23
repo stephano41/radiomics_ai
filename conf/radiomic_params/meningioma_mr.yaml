@@ -58,7 +58,7 @@ setting:
   # On a side note: increasing the resampled spacing forces PyRadiomics to look at more coarse textures, which may or
   # may not increase accuracy and stability of your extracted features.
   interpolator: "sitkLinear"
-  resampledPixelSpacing: [2, 2, 0]
+  resampledPixelSpacing: [1, 1, 1]
   #padDistance: 10  # Extra padding for large sigma valued LoG filtered images
 
   # Mask validation:

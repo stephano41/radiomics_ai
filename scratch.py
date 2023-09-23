@@ -3,15 +3,13 @@ from datetime import datetime
 
 import torch.optim
 import torchio as tio
-from skorch import NeuralNet
-from skorch.callbacks import EarlyStopping, GradientNormClipping, PassthroughScoring
+from skorch.callbacks import EarlyStopping, GradientNormClipping
 from torchio import SubjectsDataset
 
-from src.dataset.dl_dataset import SitkImageProcessor
+from src.preprocessing.sitk_image_processor import SitkImageProcessor
 from src.dataset.skorch_subject_ds import SkorchSubjectsDataset
 from src.dataset.transforming_dataloader import TransformingDataLoader
-from src.models.autoencoder import SegResNetVAE2, VAELoss, BetaVAELoss, MSSIM, Encoder
-from src.models.loss_funcs import PassThroughLoss
+from src.models.autoencoder import SegResNetVAE2, BetaVAELoss, Encoder
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 import SimpleITK as sitk
 import matplotlib.pyplot as plt

@@ -1,7 +1,7 @@
 from autorad.models import MLClassifier as OrigMLClassifier
 import numpy as np
 
-
+# will be deprecated
 class MLClassifier(OrigMLClassifier):
     def __getattr__(self, item):
         if item.startswith("__"):  # this allows for deepcopy

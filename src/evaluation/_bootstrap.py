@@ -34,7 +34,7 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
             for score in tqdm(pool.imap_unordered(partial_bootstrap, oob.split(X, Y)), total=oob.n_splits):
                 scores.append(score)
     else:
-        scores = [partial_bootstrap(idx) for idx in oob.split(X, Y)]
+        scores = [partial_bootstrap(idx) for idx in tqdm(oob.split(X, Y))]
 
     # remote_bootstrap = ray.remote(num_gpus=num_gpu, max_calls=1, num_cpus=num_cpu)(_one_bootstrap)
     # model_id, X_id, Y_id = ray.put(model), ray.put(X), ray.put(Y)

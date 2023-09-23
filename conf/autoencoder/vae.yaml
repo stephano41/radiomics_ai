@@ -2,7 +2,7 @@
 
 _target_: sklearn.pipeline.make_pipeline
 _args_:
-    - _target_: src.dataset.dl_dataset.SitkImageProcessor
+    - _target_: src.preprocessing.SitkImageProcessor
       result_dir: ./outputs
       data_dir: ${feature_dataset.data_dir}
       image_stems: ${feature_dataset.image_stems}

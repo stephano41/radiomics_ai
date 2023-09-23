@@ -1,24 +1,43 @@
-import os
-import pickle
-from pathlib import Path
 from typing import Tuple
 
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
-import SimpleITK as sitk
-from radiomics import imageoperations
-from radiomics.imageoperations import _checkROI
-import numpy as np
-from pqdm.processes import pqdm
 import torchio as tio
-from torchio import SubjectsDataset
-from tqdm import tqdm
 
-from ..utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
-
+from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 
 
 class SitkImageProcessor(BaseEstimator, TransformerMixin):
+    """
+    A scikit-learn compatible transformer for processing medical image data stored as SimpleITK images.
+
+    This class is designed to work with medical image data organized in a directory structure where each subject has its
+    own folder containing image and mask files. It provides methods for loading, processing, and transforming image data.
+
+    Parameters:
+        data_dir (str): The root directory containing the subject folders with image and mask data.
+        image_stems (tuple of str, optional): A tuple of image stem names to identify different image modalities.
+            Default is ('image').
+        mask_stem (str, optional): The stem name to identify mask files. Default is 'mask'.
+
+    Attributes:
+        data_dir (str): The root directory containing the subject folders.
+        mask_stem (str): The stem name for mask files.
+        image_stems (tuple of str): Tuple of image stem names.
+        paths_df (DataFrame): A DataFrame containing paths to image and mask files for each subject.
+        subject_list (list of Subject): A list of Subject objects, each representing a subject with associated image
+            and mask data.
+
+    Methods:
+        fit(X, y=None): Fit method for scikit-learn compatibility. This transformer is stateless and does not require fitting.
+        transform(X, y=None): Transforms a list of subject IDs into a DataFrame containing image and mask data.
+
+    Properties:
+        image_column_names: Returns a list of column names for the image data in the transformed DataFrame.
+
+    Example:
+        processor = SitkImageProcessor(data_dir='/path/to/data')
+        subjects_data = processor.transform(['subject1', 'subject2'])"""
     def __init__(self, data_dir, image_stems: Tuple[str, ...] = ('image'), mask_stem='mask'):
         self.data_dir = data_dir
         self.mask_stem = mask_stem
@@ -49,7 +68,7 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
     def get_subjects_list(self):
         subjects = []
 
-        for _, row in tqdm(self.paths_df.iterrows()):
+        for _, row in self.paths_df.iterrows():
             images = row.loc[row.index.isin(self.image_column_names)].to_dict()
 
             subjects.append(tio.Subject(
@@ -63,6 +82,3 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
     def get_feature_names_out(self):
         # see https://stackoverflow.com/questions/75026592/how-to-create-pandas-output-for-custom-transformers
         pass
-
-# https://github.com/skorch-dev/skorch/blob/master/notebooks/Transfer_Learning.ipynb
-# https://github.com/skorch-dev/skorch/blob/master/examples/nuclei_image_segmentation/Nuclei_Image_Segmentation.ipynb
