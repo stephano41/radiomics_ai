@@ -5,9 +5,9 @@ import yaml
 from autorad.feature_extraction import FeatureExtractor
 from autorad.utils.extraction_utils import filter_pyradiomics_names
 from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
+from autorad.data import ImageDataset, FeatureDataset
 from hydra.utils import instantiate
 
-from src.dataset import ImageDataset, FeatureDataset
 from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 
 
@@ -44,7 +44,7 @@ def get_feature_dataset(target_column: str, image_dataset=None, label_csv_path=N
                               ID_colname='ID')
 
 
-def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, image_stems: Tuple[str, ...] = ('image'),
+def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, image_stems: Tuple[str, ...] = 'image',
                                    mask_stem='mask', label_csv_encoding=None, additional_features=[],
                                    extraction_params="mr_default.yml", n_jobs=-1,
                                    feature_df_merger=None, existing_feature_df=None) -> FeatureDataset:

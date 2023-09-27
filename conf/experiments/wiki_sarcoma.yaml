@@ -19,5 +19,5 @@ optimizer:
     n_trials: 10
 
 bootstrap:
-    iters: 100
+    iters: 10
 

@@ -43,11 +43,11 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
     #                                           X=X_id, Y=Y_id, method=method_id) for idx in
     #                   oob.split(X, Y)])
     # ray.shutdown()
+    pd_scores = pd.concat(scores, ignore_index=True)
+    return get_ci_each_col(pd_scores, alpha), pd_scores
 
-    return get_ci_each_col(pd.concat(scores, ignore_index=True), alpha)
 
-
-def log_ci2mlflow(ci_dict: Dict, run_id=None):
+def log_ci2mlflow(ci_dict: Dict, raw_scores: pd.DataFrame=None, run_id=None):
     metrics_dict = {}
 
     for name, (lower, upper) in ci_dict.items():
@@ -56,7 +56,9 @@ def log_ci2mlflow(ci_dict: Dict, run_id=None):
 
     with mlflow.start_run(run_id=run_id):
         # log original confidence interval dict for future presentation
-        mlflow.log_dict(ci_dict, "confidence_intervals.yaml")
+        mlflow.log_dict(ci_dict, "confidence_intervals.json")
+        if raw_scores is not None:
+            mlflow.log_dict(raw_scores.to_dict(), 'raw_scores.json')
         # log to metrics to display in mlflow
         mlflow.log_metrics(metrics_dict)
 
@@ -90,9 +92,10 @@ def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632'):
 
 
 def index_array(a, idx):
-    if isinstance(a, pd.DataFrame):
-        return a.loc[idx]
+    if isinstance(a, (pd.DataFrame, pd.Series)):
+        return a.reset_index(drop=True).loc[idx]
     else:
+
         return a[idx]
 
 

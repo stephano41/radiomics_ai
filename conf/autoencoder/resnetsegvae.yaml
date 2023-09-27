@@ -30,8 +30,8 @@ _args_:
       iterator_train__augment_transforms:
         _target_: torchio.Compose
         transforms:
-            - _target_: torchio.RandomBlur
-              std: 0.1
+            - _target_: torchio.RandomGamma
+              log_gamma: 0.1
               label_keys: mask
             - _target_: torchio.RandomAffine
               p: 0.5

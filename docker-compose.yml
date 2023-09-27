@@ -14,6 +14,7 @@ services:
                 - HYDRA_FULL_ERROR=1
                 - TZ=Australia/Adelaide
                 - WANDB_API_KEY=${WANDB_API_KEY}
+                - ENABLE_AUTORAD_LOGGING=0
             tty: true
             stdin_open: true
             ports:
