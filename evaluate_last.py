@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 @hydra.main(config_path='conf', config_name='main', version_base='1.3')
 def main(config):
     last_run = get_last_run_from_experiment_name(config.name)
+    logger.info(f'evaluating {last_run.run_id}')
     pipeline = get_pipeline_from_last_run(config.name)
 
     dataset_artifacts = load_dataset_artifacts(last_run)
