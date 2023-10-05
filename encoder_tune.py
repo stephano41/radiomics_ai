@@ -3,7 +3,7 @@ import os
 import torch
 from skorch.callbacks import EarlyStopping, GradientNormClipping
 
-from src.dataset import SitkImageProcessor
+from src.preprocessing import SitkImageProcessor
 from src.models.autoencoder import Encoder, VanillaVAE, BetaVAELoss, MSSIM
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 from src.training import EncoderTrainer

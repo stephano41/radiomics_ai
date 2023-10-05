@@ -1,0 +1,11 @@
+# @package _global_
+
+pipeline:
+  _target_: src.pipeline.evaluate_last
+
+defaults:
+  - main_pipeline.yaml
+  - _self_
+
+
+

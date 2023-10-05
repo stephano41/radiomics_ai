@@ -7,7 +7,8 @@ import hydra
 from omegaconf import OmegaConf
 
 from src.evaluation import bootstrap, log_ci2mlflow
-from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
+from .pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
+from .evaluate_last import evaluate_last
 from src.training import Trainer
 from src.preprocessing import run_auto_preprocessing
 from autorad.models import MLClassifier
@@ -59,17 +60,16 @@ def tune_pipeline(config):
     trainer.run(auto_preprocess=True, experiment_name=experiment_name)
 
     # start evaluation
-    pipeline = get_pipeline_from_last_run(experiment_name)
-
-    confidence_interval, raw_scores = bootstrap(pipeline, feature_dataset.X, feature_dataset.y,
-                                    **config.bootstrap)
-
-    logger.info(confidence_interval)
-    log_ci2mlflow(confidence_interval, raw_scores=raw_scores,
-                  run_id=get_last_run_from_experiment_name(experiment_name).run_id)
+    evaluate_last(config)
+    # pipeline = get_pipeline_from_last_run(experiment_name)
+    #
+    # confidence_interval, raw_scores = bootstrap(pipeline, feature_dataset.X, feature_dataset.y,
+    #                                 **config.bootstrap)
+    #
+    # logger.info(confidence_interval)
+    # log_ci2mlflow(confidence_interval, raw_scores=raw_scores,
+    #               run_id=get_last_run_from_experiment_name(experiment_name).run_id)
 
 #TODO calibration score?
-#TODO get hydra logging to work
-# TODO get deep learning to work
 
 

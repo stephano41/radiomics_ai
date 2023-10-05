@@ -5,8 +5,16 @@ Also contains data for wiki sarcoma, meningioma
 ## Docker Compose:
 Build the container: `docker compose build`\
 Launch mlflow server to view runs: `docker compose up app`\
-run wiki sarcoma experiment, in docker app container terminal: `python main.py "experiments=wiki_sarcoma"`\
-run meningioma experiment, in docker app container terminal: `python main.py "experiments=meningioma"`
+Main pipeliine is run by using the `main.py` script and specifying an experiment config\
+You can also run only the bootstrap portion of the pipeline to evaluate a model by specifying `pipelines=evaluate_last`
+### Running experiments
+**Wikisarcoma**
+ - radiomics: `docker compose run app python main.py experiments=wiki_sarcoma`
+
+**Meningioma**
+ - radiomics only: `docker compose run app python main.py experiments=meningioma`
+ - radiomics + deep learning autoencoder features: `docker comopose run app python main.py experiments=meningioma_autoencoder`
+
 
 ## Pycharm interpreter setup
 setup interpreter with pycharm using the docker compose interpreter setting, don't adjust any other run time settings 
@@ -17,3 +25,4 @@ copy the generated token in the outputs, go to jupyter notebook and paste url an
 make sure the working directory in the notebook is correct before working
 ### Pytest
 To run pytests: `docker compose run app pytest`
+
