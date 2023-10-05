@@ -3,12 +3,12 @@ from functools import partial
 from typing import Dict
 
 import mlflow
-import pandas as pd
 import numpy as np
-from .stratified_bootstrap import BootstrapGenerator
+import pandas as pd
 from tqdm import tqdm
 
 from src.metrics import Scorer
+from .stratified_bootstrap import BootstrapGenerator
 
 
 # metrics to include: positive predictive value, negative predictive, sensitivity, specificity, AUC
@@ -28,7 +28,7 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
     partial_bootstrap = partial(_one_bootstrap, model=model, scoring_func=score_func,
                                 X=X, Y=Y, method=method)
 
-    if num_cpu>1:
+    if num_cpu > 1:
 
         with multiprocessing.get_context('spawn').Pool(num_cpu) as pool:
             for score in tqdm(pool.imap_unordered(partial_bootstrap, oob.split(X, Y)), total=oob.n_splits):
@@ -36,18 +36,11 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
     else:
         scores = [partial_bootstrap(idx) for idx in tqdm(oob.split(X, Y))]
 
-    # remote_bootstrap = ray.remote(num_gpus=num_gpu, max_calls=1, num_cpus=num_cpu)(_one_bootstrap)
-    # model_id, X_id, Y_id = ray.put(model), ray.put(X), ray.put(Y)
-    # score_func_id, method_id = ray.put(score_func), ray.put(method)
-    # scores = ray.get([remote_bootstrap.remote(idx, model=model_id, scoring_func=score_func_id,
-    #                                           X=X_id, Y=Y_id, method=method_id) for idx in
-    #                   oob.split(X, Y)])
-    # ray.shutdown()
     pd_scores = pd.concat(scores, ignore_index=True)
     return get_ci_each_col(pd_scores, alpha), pd_scores
 
 
-def log_ci2mlflow(ci_dict: Dict, raw_scores: pd.DataFrame=None, run_id=None):
+def log_ci2mlflow(ci_dict: Dict, raw_scores: pd.DataFrame = None, run_id=None):
     metrics_dict = {}
 
     for name, (lower, upper) in ci_dict.items():

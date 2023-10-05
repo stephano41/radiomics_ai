@@ -60,7 +60,7 @@ def move_plot_nii(static, moving, out_path, transform_method='com'):
     registered_moving_img = sitk.ReadImage(out_path)
 
     fig2 = regtools.overlay_images(sitk.GetArrayFromImage(static_img)[12, :, :],
-                            sitk.GetArrayFromImage(registered_moving_img)[12, :, :],
-                            title0='static', title1='moving')
+                                   sitk.GetArrayFromImage(registered_moving_img)[12, :, :],
+                                   title0='static', title1='moving')
     fig2.suptitle(f"{transform_method} static: {os.path.basename(static)}, moving: {os.path.basename(moving)}")
     fig2.tight_layout()

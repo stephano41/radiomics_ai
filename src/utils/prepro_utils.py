@@ -1,9 +1,8 @@
 import logging
 import os
-from typing import List, Tuple
+from typing import Tuple
 
 import pandas as pd
-
 from autorad.config.type_definitions import PathLike
 from autorad.utils.preprocessing import make_relative
 
@@ -11,10 +10,10 @@ log = logging.getLogger(__name__)
 
 
 def get_multi_paths_with_separate_folder_per_case(
-    data_dir: PathLike,
-    image_stems: Tuple[str, ...] = ("image"),
-    mask_stem: str = "segmentation",
-    relative: bool = False,
+        data_dir: PathLike,
+        image_stems: Tuple[str, ...] = ("image"),
+        mask_stem: str = "segmentation",
+        relative: bool = False,
 ) -> pd.DataFrame:
     """
     Create a DataFrame containing paths to multiple images with separate folders per case.
@@ -77,6 +76,5 @@ def get_multi_paths_with_separate_folder_per_case(
     path_df = pd.DataFrame(data_dict)
 
     return path_df
-
 
 # def create_autoencoder(image_processor_kwargs, )

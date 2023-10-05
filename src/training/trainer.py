@@ -1,17 +1,17 @@
+import logging
 from functools import partial
+from typing import Sequence
 
 import joblib
+import mlflow
+import numpy as np
 from autorad.config.type_definitions import PathLike
 from autorad.data import FeatureDataset, TrainingData
 from autorad.models import MLClassifier
 from autorad.training import Trainer as OrigTrainer, train_utils
-import mlflow
-import logging
-
 from autorad.utils import mlflow_utils
 from optuna.trial import Trial
-import numpy as np
-from typing import Sequence
+
 from src.metrics import roc_auc
 from src.preprocessing import Preprocessor
 
@@ -24,8 +24,8 @@ class Trainer(OrigTrainer):
                  models: Sequence[MLClassifier],
                  result_dir: PathLike,
                  multi_class: str = "raise",
-                 labels = None,
-                 average = "macro"
+                 labels=None,
+                 average="macro"
                  ):
 
         self.multi_class = multi_class
@@ -36,16 +36,14 @@ class Trainer(OrigTrainer):
         self._existing_preprocess_kwargs = None
         super().__init__(dataset, models, result_dir)
 
-
     def run(
-        self,
-        auto_preprocess: bool = False,
-        experiment_name="model_training",
+            self,
+            auto_preprocess: bool = False,
+            experiment_name="model_training",
     ):
         if auto_preprocess:
             _, self._existing_preprocess_kwargs = self.get_preprocessed_pickle()
         super().run(auto_preprocess, experiment_name)
-
 
     def _objective(self, trial: Trial, auto_preprocess=False) -> float:
         """Get params from optuna trial, return the metric."""
@@ -58,12 +56,12 @@ class Trainer(OrigTrainer):
         model = self.set_optuna_params(model, trial)
         aucs = []
         for (
-            X_train,
-            y_train,
-            _,
-            X_val,
-            y_val,
-            _,
+                X_train,
+                y_train,
+                _,
+                X_val,
+                y_val,
+                _,
         ) in data.iter_training():
             X_train = X_train.to_numpy()
             y_train = y_train.to_numpy()
@@ -147,7 +145,7 @@ class Trainer(OrigTrainer):
             )
         if "autoencoder" in preprocessor.pipeline.named_steps:
             mlflow_utils.log_dict_as_artifact(
-               preprocessor_kwargs['autoencoder'], "autoencoder"
+                preprocessor_kwargs['autoencoder'], "autoencoder"
             )
 
         mlflow.sklearn.log_model(preprocessor, "preprocessor")

@@ -1,29 +1,26 @@
 import json
-import os
-import itertools
 from typing import Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import wandb
 from sklearn import clone
 from sklearn.model_selection import ParameterGrid
-import torch
 from skorch import NeuralNet
-import matplotlib.pyplot as plt
 from skorch.callbacks import WandbLogger
 
 from src.preprocessing import SitkImageProcessor
 
 
 class EncoderTrainer:
-    def __init__(self, autoencoder: NeuralNet, param_grid, feature_dataset, data_dir, image_stems: Tuple[str, ...] = ('image'), mask_stem='mask'):
+    def __init__(self, autoencoder: NeuralNet, param_grid, feature_dataset, data_dir,
+                 image_stems: Tuple[str, ...] = ('image'), mask_stem='mask'):
         self.autoencoder = autoencoder
         self.param_grid = param_grid
         self.feature_dataset = feature_dataset
 
         self.image_reader = SitkImageProcessor(data_dir, mask_stem=mask_stem,
-                                    image_stems=image_stems)
+                                               image_stems=image_stems)
 
     def run(self, wandb_kwargs, num_samples=5, slice_index=8, save_model=True):
         if wandb_kwargs.get('project', None) is not None:
@@ -47,17 +44,17 @@ class EncoderTrainer:
             cleaned_hyperparameters = clean_dict_for_json(all_hyperparameters)
 
             # Log hyperparameters
-            wandb_kwargs.update({'config':cleaned_hyperparameters})
+            wandb_kwargs.update({'config': cleaned_hyperparameters})
 
             # Initialize a new run with WandB
             run = wandb.init(**wandb_kwargs)
 
-            _autoencoder2.set_params(callbacks= all_hyperparameters['callbacks'] + [WandbLogger(run, save_model=save_model)])
+            _autoencoder2.set_params(
+                callbacks=all_hyperparameters['callbacks'] + [WandbLogger(run, save_model=save_model)])
 
             for i, (train_x, train_y, val_x, val_y) in enumerate(
                     zip(self.feature_dataset.data.X.train_folds, self.feature_dataset.data.y.train_folds,
                         self.feature_dataset.data.X.val_folds, self.feature_dataset.data.y.val_folds)):
-
                 images = self.image_reader.fit_transform(train_x['ID'])
                 _autoencoder = clone(_autoencoder2)
                 # Train the autoencoder
@@ -68,11 +65,12 @@ class EncoderTrainer:
                 image_ds = _autoencoder.get_dataset(images)
 
                 # Log generated images
-                image_plots = plot_generated_images(generated_images, np.stack([image_ds[sample][0].numpy() for sample in range(num_samples)]),
+                image_plots = plot_generated_images(generated_images, np.stack(
+                    [image_ds[sample][0].numpy() for sample in range(num_samples)]),
                                                     title=f"{str(params)}-fold-{i}",
                                                     num_samples=num_samples, slice_index=slice_index)
 
-                run.log({f"generated_images_{i}_{k+1}":image_plot for k, image_plot in enumerate(image_plots)})
+                run.log({f"generated_images_{i}_{k + 1}": image_plot for k, image_plot in enumerate(image_plots)})
 
             # Close the WandB run
             run.finish()
@@ -81,7 +79,7 @@ class EncoderTrainer:
 def plot_generated_images(output_image, original_image, num_samples=5, slice_index=8, title=None):
     batch_size, num_modalities, length, width, height = output_image.shape
 
-    images=[]
+    images = []
     for sample_idx in range(min(num_samples, batch_size)):
         plt.figure(figsize=(15, 5))  # Adjust the figure size as needed
 

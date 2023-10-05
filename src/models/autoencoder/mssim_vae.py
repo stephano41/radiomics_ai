@@ -1,14 +1,15 @@
 import torch
+from math import exp
 from torch import nn, Tensor
 from torch.nn import functional as F
-from math import exp
+
 
 class MSSIM(nn.Module):
 
     def __init__(self,
                  in_channels: int = 3,
-                 window_size: int=11,
-                 size_average:bool = True,
+                 window_size: int = 11,
+                 size_average: bool = True,
                  kld_weight=0.00025,
                  finish_size=2) -> None:
         """
@@ -28,10 +29,10 @@ class MSSIM(nn.Module):
         self.kld_weight = kld_weight
         self.finish_size = finish_size
 
-    def gaussian_window(self, window_size:int, sigma: float) -> Tensor:
-        kernel = torch.tensor([exp((x - window_size // 2)**2/(2 * sigma ** 2))
+    def gaussian_window(self, window_size: int, sigma: float) -> Tensor:
+        kernel = torch.tensor([exp((x - window_size // 2) ** 2 / (2 * sigma ** 2))
                                for x in range(window_size)])
-        return kernel/kernel.sum()
+        return kernel / kernel.sum()
 
     def create_window(self, window_size, in_channels):
         _1D_window = self.gaussian_window(window_size, 1.5).unsqueeze(1)
@@ -48,18 +49,18 @@ class MSSIM(nn.Module):
 
         device = img1.device
         window = self.create_window(window_size, in_channel).to(device)
-        mu1 = F.conv3d(img1, window, padding= window_size//2, groups=in_channel)
-        mu2 = F.conv3d(img2, window, padding= window_size//2, groups=in_channel)
+        mu1 = F.conv3d(img1, window, padding=window_size // 2, groups=in_channel)
+        mu2 = F.conv3d(img2, window, padding=window_size // 2, groups=in_channel)
 
         mu1_sq = mu1.pow(2)
         mu2_sq = mu2.pow(2)
         mu1_mu2 = mu1 * mu2
 
-        sigma1_sq = F.conv3d(img1 * img1, window, padding = window_size//2, groups=in_channel) - mu1_sq
-        sigma2_sq = F.conv3d(img2 * img2, window, padding = window_size//2, groups=in_channel) - mu2_sq
-        sigma12   = F.conv3d(img1 * img2, window, padding = window_size//2, groups=in_channel) - mu1_mu2
+        sigma1_sq = F.conv3d(img1 * img1, window, padding=window_size // 2, groups=in_channel) - mu1_sq
+        sigma2_sq = F.conv3d(img2 * img2, window, padding=window_size // 2, groups=in_channel) - mu2_sq
+        sigma12 = F.conv3d(img1 * img2, window, padding=window_size // 2, groups=in_channel) - mu1_mu2
 
-        img_range = 1.0 #img1.max() - img1.min() # Dynamic range
+        img_range = 1.0  # img1.max() - img1.min() # Dynamic range
         C1 = (0.01 * img_range) ** 2
         C2 = (0.03 * img_range) ** 2
 

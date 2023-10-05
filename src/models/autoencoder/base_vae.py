@@ -1,7 +1,7 @@
+from abc import abstractmethod
 from typing import List, Any
 
 from torch import nn, Tensor
-from abc import abstractmethod
 
 
 class BaseVAE(nn.Module):

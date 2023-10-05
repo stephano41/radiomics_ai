@@ -5,11 +5,12 @@ from torch.nn import functional as F
 
 class BetaVAELoss(nn.Module):
     num_iter = 0
+
     def __init__(self, beta=4, gamma=1000, kld_weight=0.00025, max_capacity=25, Capacity_max_iter: int = 1e5,
-                 loss_type:str = 'B',):
+                 loss_type: str = 'B', ):
         super().__init__()
-        self.beta=beta
-        self.gamma=gamma
+        self.beta = beta
+        self.gamma = gamma
         self.kld_weight = kld_weight
         self.loss_type = loss_type
         self.C_max = torch.Tensor([max_capacity])

@@ -1,6 +1,7 @@
 import pandas as pd
-from torchio import SubjectsDataset
 import torch
+from torchio import SubjectsDataset
+
 
 class SkorchSubjectsDataset(SubjectsDataset):
     def __init__(self, subjects, y=None, transform=None, load_getitem=True):

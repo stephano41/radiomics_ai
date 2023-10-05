@@ -1,9 +1,10 @@
+import logging
+
 from autorad.inference.infer_utils import get_last_run_from_experiment_name, load_dataset_artifacts, \
     load_feature_dataset
 
 from src.evaluation import bootstrap, log_ci2mlflow
 from src.utils.infer_utils import get_pipeline_from_last_run
-import logging
 
 logger = logging.getLogger(__name__)
 

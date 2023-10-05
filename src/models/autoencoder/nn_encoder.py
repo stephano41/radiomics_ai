@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from importlib import import_module
+
 import SimpleITK as sitk
 import numpy as np
 import pandas as pd
 import torch
 from sklearn.base import TransformerMixin
-from importlib import import_module
-
 from skorch import NeuralNet
 from skorch.callbacks import PassthroughScoring, PrintLog, EpochTimer
 from skorch.utils import to_device, to_tensor, to_numpy

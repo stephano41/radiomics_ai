@@ -1,20 +1,16 @@
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
-import logging
 
 import hydra
+from autorad.models import MLClassifier
 from omegaconf import OmegaConf
 
-from src.evaluation import bootstrap, log_ci2mlflow
-from .pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
-from .evaluate_last import evaluate_last
-from src.training import Trainer
 from src.preprocessing import run_auto_preprocessing
-from autorad.models import MLClassifier
-from autorad.inference.infer_utils import get_last_run_from_experiment_name
-from src.utils.infer_utils import get_pipeline_from_last_run
-
+from src.training import Trainer
+from .evaluate_last import evaluate_last
+from .pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +20,6 @@ def tune_pipeline(config):
     feature_dataset = get_multimodal_feature_dataset(**config.feature_dataset)
 
     output_dir = hydra.utils.HydraConfig.get().run.dir
-    # output_dir = './outputs/meningioma/2023-08-24-07-01-59'
     # save the feature_dataset
     feature_dataset.df.to_csv(os.path.join(output_dir, 'extracted_features.csv'))
 
@@ -61,15 +56,5 @@ def tune_pipeline(config):
 
     # start evaluation
     evaluate_last(config)
-    # pipeline = get_pipeline_from_last_run(experiment_name)
-    #
-    # confidence_interval, raw_scores = bootstrap(pipeline, feature_dataset.X, feature_dataset.y,
-    #                                 **config.bootstrap)
-    #
-    # logger.info(confidence_interval)
-    # log_ci2mlflow(confidence_interval, raw_scores=raw_scores,
-    #               run_id=get_last_run_from_experiment_name(experiment_name).run_id)
 
-#TODO calibration score?
-
-
+# TODO calibration score?

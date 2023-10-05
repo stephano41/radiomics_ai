@@ -21,7 +21,7 @@ class LogCashLoss(nn.Module):
         input = args[0][1]
         mu = args[0][2]
         log_var = args[0][3]
-          # Account for the minibatch samples from the dataset
+        # Account for the minibatch samples from the dataset
         t = recons - input
         # recons_loss = F.mse_loss(recons, input)
         # cosh = torch.cosh(self.alpha * t)

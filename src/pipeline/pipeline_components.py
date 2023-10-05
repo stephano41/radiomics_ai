@@ -2,10 +2,10 @@ from typing import Tuple
 
 import pandas as pd
 import yaml
+from autorad.data import ImageDataset, FeatureDataset
 from autorad.feature_extraction import FeatureExtractor
 from autorad.utils.extraction_utils import filter_pyradiomics_names
 from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
-from autorad.data import ImageDataset, FeatureDataset
 from hydra.utils import instantiate
 
 from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
@@ -28,6 +28,7 @@ def get_feature_dataset(target_column: str, image_dataset=None, label_csv_path=N
                         n_jobs=-1, label_csv_encoding=None, feature_df_merger=None,
                         existing_feature_df=None) -> FeatureDataset:
     if existing_feature_df is None:
+        assert image_dataset is not None, f"param image_dataset cannot be None when existing_feature_df is not provided"
         extractor = FeatureExtractor(image_dataset, extraction_params=extraction_params, n_jobs=n_jobs)
 
         feature_df = extractor.run()
@@ -70,7 +71,8 @@ def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, imag
         feature_df = extractor.run()
 
         feature_df = feature_df.rename(columns=
-            {feature_name: f'{feature_name}_{image_stem}' for feature_name in filter_pyradiomics_names(feature_df.columns.tolist())})
+                                       {feature_name: f'{feature_name}_{image_stem}' for feature_name in
+                                        filter_pyradiomics_names(feature_df.columns.tolist())})
 
         feature_dfs.append(feature_df)
 
@@ -83,7 +85,8 @@ def get_multimodal_feature_dataset(data_dir, label_csv_path, target_column, imag
 
     merged_feature_df = instantiate(feature_df_merger, label_df=label_df, feature_df=all_feature_df)
 
-    return FeatureDataset(merged_feature_df, target=target_column, ID_colname='ID', additional_features=additional_features)
+    return FeatureDataset(merged_feature_df, target=target_column, ID_colname='ID',
+                          additional_features=additional_features)
 
 
 def split_feature_dataset(feature_dataset: FeatureDataset, existing_split=None, save_path=None,

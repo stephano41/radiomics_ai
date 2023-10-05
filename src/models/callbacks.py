@@ -1,5 +1,3 @@
-from contextlib import suppress
-
 from skorch import NeuralNet
 from skorch.callbacks import Callback
 
@@ -33,7 +31,6 @@ class SimpleLoadInitState(Callback):
                  f_optimizer=None,
                  f_criterion=None,
                  f_history=None):
-
         self.f_params = f_params
         self.f_optimizer = f_optimizer
         self.f_criterion = f_criterion
@@ -49,4 +46,3 @@ class SimpleLoadInitState(Callback):
             self.did_load_ = True
             net.load_params(f_params=self.f_params, f_history=self.f_history, f_optimizer=self.f_optimizer,
                             f_criterion=self.f_criterion)
-

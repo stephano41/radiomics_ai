@@ -1,8 +1,8 @@
 from typing import Tuple
 
 import pandas as pd
-from sklearn.base import BaseEstimator, TransformerMixin
 import torchio as tio
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 
@@ -38,6 +38,7 @@ class SitkImageProcessor(BaseEstimator, TransformerMixin):
     Example:
         processor = SitkImageProcessor(data_dir='/path/to/data')
         subjects_data = processor.transform(['subject1', 'subject2'])"""
+
     def __init__(self, data_dir, image_stems: Tuple[str, ...] = ('image'), mask_stem='mask'):
         self.data_dir = data_dir
         self.mask_stem = mask_stem

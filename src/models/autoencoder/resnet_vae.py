@@ -3,12 +3,14 @@ Author: Duy-Phuong Dao
 Email : phuongdd.1997@gmail.com or duyphuongcri@gmail.com
 """
 
+from typing import List, Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
+
 from .base_vae import BaseVAE
-from typing import List, Tuple
 from .initialisations import he_init
 
 
@@ -217,5 +219,3 @@ class up_conv(nn.Module):
 
     def forward(self, x):
         return self.up(x)
-
-

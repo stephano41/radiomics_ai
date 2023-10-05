@@ -1,6 +1,6 @@
-from monai.networks.nets import SegResNetVAE
 import torch
 import torch.nn.functional as F
+from monai.networks.nets import SegResNetVAE
 
 
 class SegResNetVAE2(SegResNetVAE):

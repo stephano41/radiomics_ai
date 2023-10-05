@@ -34,7 +34,7 @@ class BootstrapGenerator(object):
     def __init__(self, n_splits=200, random_seed=None, stratify=False):
         self.random_seed = random_seed
 
-        self.stratify=stratify
+        self.stratify = stratify
 
         if not isinstance(n_splits, int) or n_splits < 1:
             raise ValueError("Number of splits must be greater than 1.")

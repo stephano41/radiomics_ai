@@ -1,7 +1,6 @@
 import logging
 
 import pandas as pd
-
 from autorad.data import FeatureDataset
 from autorad.models import MLClassifier
 from autorad.preprocessing import Preprocessor
@@ -10,10 +9,10 @@ log = logging.getLogger(__name__)
 
 
 def evaluate_feature_dataset(
-    dataset: FeatureDataset,
-    model: MLClassifier,
-    preprocessor: Preprocessor,
-    split: str = "test",
+        dataset: FeatureDataset,
+        model: MLClassifier,
+        preprocessor: Preprocessor,
+        split: str = "test",
 ) -> pd.DataFrame:
     """
     Evaluate a feature dataset using a model and a preprocessor.

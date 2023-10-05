@@ -24,5 +24,5 @@ def _test_bootstrap(bootstrap_method):
 
     model = KNeighborsClassifier(3)
 
-    return bootstrap(model, feature_dataset.X.to_numpy(), feature_dataset.y.to_numpy(), iters=20, num_cpu=1,
+    return bootstrap(model, feature_dataset.X, feature_dataset.y, iters=20, num_cpu=1,
                      labels=[0, 1, 2], method=bootstrap_method)

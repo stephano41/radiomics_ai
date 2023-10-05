@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 from sklearn.metrics import confusion_matrix, roc_auc_score
+
 log = logging.getLogger(__name__)
 
 
@@ -10,7 +11,7 @@ def negative_predictive_value(y_true, y_pred, average='raise', labels=None):
     if labels is None:
         binary = len(np.unique(y_true)) <= 2
     else:
-        binary = len(labels) <=2
+        binary = len(labels) <= 2
 
     if binary:
         # Compute confusion matrix for binary classification
@@ -82,7 +83,7 @@ def specificity(y_true, y_pred, average='raise', labels=None):
 
 
 def roc_auc(y_true, y_pred, average='macro', multi_class='raise', labels=None):
-    if len(y_pred.shape) >=2:
+    if len(y_pred.shape) >= 2:
         if y_pred.shape[1] <= 2:
             y_pred = y_pred[:, 1]
 

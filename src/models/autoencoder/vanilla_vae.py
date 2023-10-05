@@ -1,10 +1,10 @@
 from typing import List, Tuple
 
 import torch
-from .base_vae import BaseVAE
 from torch import nn, Tensor
 from torch.nn import functional as F
 
+from .base_vae import BaseVAE
 from .initialisations import he_init
 
 
@@ -39,13 +39,13 @@ class VanillaVAE(BaseVAE):
             in_channels = h_dim
 
         self.encoder = nn.Sequential(*modules)
-        self.fc_mu = nn.Linear(hidden_dims[-1] * finish_size**3, latent_dim)
-        self.fc_var = nn.Linear(hidden_dims[-1] * finish_size**3, latent_dim)
+        self.fc_mu = nn.Linear(hidden_dims[-1] * finish_size ** 3, latent_dim)
+        self.fc_var = nn.Linear(hidden_dims[-1] * finish_size ** 3, latent_dim)
 
         # Build Decoder
         modules = []
 
-        self.decoder_input = nn.Linear(latent_dim, hidden_dims[-1] * finish_size**3)
+        self.decoder_input = nn.Linear(latent_dim, hidden_dims[-1] * finish_size ** 3)
 
         hidden_dims.reverse()
 
@@ -121,7 +121,7 @@ class VanillaVAE(BaseVAE):
         eps = torch.randn_like(std)
         return eps * std + mu
 
-    def forward(self, input: Tensor, **kwargs) -> Tuple[Tensor,...]:
+    def forward(self, input: Tensor, **kwargs) -> Tuple[Tensor, ...]:
         mu, log_var = self.encode(input)
         z = self.reparameterize(mu, log_var)
         return (self.decode(z), input, mu, log_var)
@@ -183,7 +183,6 @@ class VAELoss(nn.Module):
         self.kld_weight = kld_weight
 
     def forward(self, *args, **kwargs):
-
         # args from scorch is ([recons, input, mu, log_var] ,X)
         recons = args[0][0]
         input = args[0][1]
@@ -197,6 +196,3 @@ class VAELoss(nn.Module):
 
         loss = recons_loss + self.kld_weight * kld_loss
         return {'loss': loss, 'recons_loss': recons_loss, 'kld_loss': kld_loss}
-
-
-
