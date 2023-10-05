@@ -19,9 +19,9 @@ def evaluate_last(config):
                                            dataset_config=dataset_artifacts['dataset_config'],
                                            splits=dataset_artifacts['splits'])
 
-    confidence_interval, raw_scores = bootstrap(pipeline, feature_dataset.X, feature_dataset.y,
+    confidence_interval, tpr_fpr = bootstrap(pipeline, feature_dataset.X, feature_dataset.y,
                                                 **config.bootstrap)
 
     logger.info(confidence_interval)
-    log_ci2mlflow(confidence_interval, raw_scores=raw_scores,
+    log_ci2mlflow(confidence_interval, tpr_fpr,
                   run_id=last_run.run_id)

@@ -8,6 +8,9 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.metrics import Scorer
+from sklearn.metrics import make_scorer, roc_curve
+
+from .roc_curve import plot_roc_curve_with_ci
 from .stratified_bootstrap import BootstrapGenerator
 
 
@@ -21,12 +24,14 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
 
     oob = BootstrapGenerator(n_splits=iters, stratify=stratify)
 
-    score_func = Scorer(multiclass=len(np.unique(Y) > 2),
+    is_multiclass=len(np.unique(Y)) > 2
+
+    score_func = Scorer(multiclass=is_multiclass,
                         labels=labels)
     scores = []
 
     partial_bootstrap = partial(_one_bootstrap, model=model, scoring_func=score_func,
-                                X=X, Y=Y, method=method)
+                                X=X, Y=Y, method=method, multiclass=is_multiclass)
 
     if num_cpu > 1:
 
@@ -36,27 +41,23 @@ def bootstrap(model, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int =
     else:
         scores = [partial_bootstrap(idx) for idx in tqdm(oob.split(X, Y))]
 
-    pd_scores = pd.concat(scores, ignore_index=True)
-    return get_ci_each_col(pd_scores, alpha), pd_scores
+    pd_scores = pd.concat([t[0] for t in scores], ignore_index=True)
+    ci = get_ci_each_col(pd_scores, alpha)
+
+    fpr_tpr = [t[1] for t in scores]
+    final_fpr_tpr = None
+    if not is_multiclass:
+        final_fpr_tpr = {'fpr':[], 'tpr':[]}
+        for d in fpr_tpr:
+            final_fpr_tpr['fpr'].append(d['fpr'])
+            final_fpr_tpr['tpr'].append(d['tpr'])
+            # final_fpr_tpr['thresholds'].append(d['thresholds'])
+        final_fpr_tpr['auc'] = pd_scores['roc_auc'].tolist()
+
+    return ci, final_fpr_tpr
 
 
-def log_ci2mlflow(ci_dict: Dict, raw_scores: pd.DataFrame = None, run_id=None):
-    metrics_dict = {}
-
-    for name, (lower, upper) in ci_dict.items():
-        metrics_dict[name + '_ll'] = lower
-        metrics_dict[name + '_ul'] = upper
-
-    with mlflow.start_run(run_id=run_id):
-        # log original confidence interval dict for future presentation
-        mlflow.log_dict(ci_dict, "confidence_intervals.json")
-        if raw_scores is not None:
-            mlflow.log_dict(raw_scores.to_dict(), 'raw_scores.json')
-        # log to metrics to display in mlflow
-        mlflow.log_metrics(metrics_dict)
-
-
-def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632'):
+def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632', multiclass=False):
     train_idx = idx[0]
     test_idx = idx[1]
     # print('hey')
@@ -81,7 +82,30 @@ def _one_bootstrap(idx, model, scoring_func: Scorer, X, Y, method='.632'):
             weight = 0.632
 
         acc = 1 - (weight * test_err + (1.0 - weight) * train_err)
-    return acc
+
+    if not multiclass:
+        roc_curve_metric = make_scorer(roc_curve)
+        roc_curve_results = roc_curve_metric(model, index_array(X, test_idx), index_array(Y, test_idx))
+        return acc, dict(zip(['fpr','tpr','thresholds'], roc_curve_results))
+    return acc, None
+
+
+
+
+def log_ci2mlflow(ci_dict: Dict, tpr_fpr: dict = None, run_id=None):
+    metrics_dict = {}
+
+    for name, (lower, upper) in ci_dict.items():
+        metrics_dict[name + '_ll'] = lower
+        metrics_dict[name + '_ul'] = upper
+
+    with mlflow.start_run(run_id=run_id):
+        # log original confidence interval dict for future presentation
+        mlflow.log_dict(ci_dict, "confidence_intervals.json")
+        if tpr_fpr is not None:
+            mlflow.log_figure(plot_roc_curve_with_ci(tpr_fpr), 'roc_curve.png')
+        # log to metrics to display in mlflow
+        mlflow.log_metrics(metrics_dict)
 
 
 def index_array(a, idx):

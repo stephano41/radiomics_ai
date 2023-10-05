@@ -3,7 +3,7 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import get_scorer, make_scorer
+from sklearn.metrics import get_scorer, make_scorer, roc_curve
 from sklearn.metrics._scorer import _ThresholdScorer, _ProbaScorer
 
 from src.metrics import specificity, negative_predictive_value, roc_auc
@@ -44,8 +44,6 @@ class Scorer:
                 * roc_auc_ovr: One-vs-Rest (OvR) ROC Area Under the Curve
                 * roc_auc_ovo: One-vs-One (OvO) ROC Area Under the Curve
         """
-        self._running_scores = []
-
         if multiclass:
             self._scores = {'recall_micro': get_scorer('recall_micro'),  # equivalent to sensitivity
                             'recall_macro': get_scorer('recall_macro'),
