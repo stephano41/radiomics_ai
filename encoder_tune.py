@@ -4,7 +4,7 @@ import torch
 from skorch.callbacks import EarlyStopping, GradientNormClipping
 
 from src.preprocessing import SitkImageProcessor
-from src.models.autoencoder import Encoder, VanillaVAE, BetaVAELoss, MSSIM
+from src.models.autoencoder import Encoder, VanillaVAE, BetaVAELoss, MSSIMLoss
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 from src.training import EncoderTrainer
 
@@ -37,7 +37,7 @@ def main():
                       module__latent_dim=128,
                       module__hidden_dims=[32, 64, 128],
                       module__finish_size=2,
-                      criterion=MSSIM,
+                      criterion=MSSIMLoss,
                       std_dim=(0, 2, 3, 4),
                       max_epochs=200,
                       output_format='pandas',

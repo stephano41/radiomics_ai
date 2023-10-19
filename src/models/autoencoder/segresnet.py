@@ -2,8 +2,10 @@ import torch
 import torch.nn.functional as F
 from monai.networks.nets import SegResNetVAE
 
+from .base_vae import BaseVAE
 
-class SegResNetVAE2(SegResNetVAE):
+
+class SegResNetVAE2(SegResNetVAE, BaseVAE):
     def forward(self, x):
 
         net_input = x
@@ -45,10 +47,10 @@ class SegResNetVAE2(SegResNetVAE):
         # return vae_loss
         return x_vae, net_input, z_mean, z_sigma * z_mean_rand
 
-    def generate(self, x):
+    def generate(self, x, **kwargs):
         return self.forward(x)[0]
 
-    def generate_latent_vars(self, x):
+    def generate_latent_vars(self, x, **kwargs):
         net_input = x
         x, _ = self.encode(x)
 

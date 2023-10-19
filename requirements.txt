@@ -1,10 +1,9 @@
-autorad @ git+https://github.com/stephano41/AutoRadiomics.git@2f7fd68805e2a3148f9d844ad3bbb69b0df8cc06
+autorad @ git+https://github.com/stephano41/AutoRadiomics.git@a2258c352b8788bb618a67757f4f56d04bee2c2a
 dcmrtstruct2nii
 pytest
 hydra-core
 jupyter
 rich
-# Boruta @ git+https://github.com/Jorjatorz/boruta_py_2.git
 mlxtend
 ray
 dipy

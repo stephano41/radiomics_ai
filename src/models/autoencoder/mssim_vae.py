@@ -4,7 +4,7 @@ from torch import nn, Tensor
 from torch.nn import functional as F
 
 
-class MSSIM(nn.Module):
+class MSSIMLoss(nn.Module):
 
     def __init__(self,
                  in_channels: int = 3,
@@ -22,7 +22,7 @@ class MSSIM(nn.Module):
         :param window_size: (Int)
         :param size_average: (Bool)
         """
-        super(MSSIM, self).__init__()
+        super(MSSIMLoss, self).__init__()
         self.in_channels = in_channels
         self.window_size = window_size
         self.size_average = size_average

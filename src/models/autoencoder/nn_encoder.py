@@ -11,9 +11,11 @@ from skorch import NeuralNet
 from skorch.callbacks import PassthroughScoring, PrintLog, EpochTimer
 from skorch.utils import to_device, to_tensor, to_numpy
 
+from src.models.autoencoder.base_vae import BaseVAE
+
 
 class Encoder(NeuralNet, TransformerMixin):
-    def __init__(self, module, output_format='tensor', **kwargs):
+    def __init__(self, module: BaseVAE, output_format='tensor', **kwargs):
         self.output_format = output_format
 
         super().__init__(**preprocess_kwargs(module=module, **kwargs))
