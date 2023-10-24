@@ -103,6 +103,8 @@ class Scorer:
                 y_pred = estimator.decision_function(X)
             except (NotImplementedError, AttributeError):
                 y_pred = estimator.predict_proba(X)
+            if y_pred.shape[1] <=2:
+                y_pred = y_pred[:, 1]
         elif isinstance(scorer, _ProbaScorer):
             y_pred = estimator.predict_proba(X)
         else:

@@ -15,7 +15,7 @@ from src.models.autoencoder.base_vae import BaseVAE
 
 
 class Encoder(NeuralNet, TransformerMixin):
-    def __init__(self, module: BaseVAE, output_format='tensor', **kwargs):
+    def __init__(self, module: BaseVAE, output_format='numpy', **kwargs):
         self.output_format = output_format
 
         super().__init__(**preprocess_kwargs(module=module, **kwargs))

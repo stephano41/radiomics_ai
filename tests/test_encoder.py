@@ -1,23 +1,24 @@
-from sklearn.datasets import load_digits
 import torch
-from skorch.callbacks import PassthroughScoring, PrintLog, EarlyStopping
-from src.models.autoencoder import VanillaVAE
-from src.models.autoencoder import Encoder, VAELoss
 
+from src.models.autoencoder import Encoder
 
-def test_encoder():
-    data = load_digits(n_class=2)
+import pytest
 
-    images, target = data['images'], data['target']
+@pytest.mark.slow
+def test_nn_encoder():
+    # generate random images batch 10, single channel, 16x16x16
+    images = torch.randn([10,1,16,16,16]).type(torch.float32)
 
-    images = torch.unsqueeze(torch.tensor(images).type(torch.float32), dim=1)
-
-    encoder = Encoder(VanillaVAE,
+    encoder = Encoder(module='src.models.autoencoder.VanillaVAE',
                       module__in_channels=1,
-                      module__latent_dim=100,
-                      module__hidden_dims=[32, 64],
-                      criterion=VAELoss
+                      module__latent_dim=64,
+                      module__hidden_dims=[8,16,32],
+                      module__finish_size=2,
+                      criterion='src.models.autoencoder.VAELoss',
+                      max_epochs=2
                       )
 
     encoder.fit(images)
+
+    encoder.transform(images)
 

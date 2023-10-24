@@ -16,7 +16,7 @@ _args_:
       module__init_filters: 32
       batch_size: 4
       max_epochs: 200
-      verbose: 0
+      verbose: 1
       output_format: pandas
       optimizer: torch.optim.AdamW
       criterion: src.models.autoencoder.beta_vae.BetaVAELoss

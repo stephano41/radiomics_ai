@@ -48,9 +48,8 @@ optimizer:
 bootstrap:
     iters: 100
     num_cpu: ${cpu_per_task}
-    num_gpu: 0
     labels: ${labels}
-    method: .632+
+    method: '.632'
     alpha: 0.95
     stratify: True
 

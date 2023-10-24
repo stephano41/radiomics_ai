@@ -60,8 +60,6 @@ class Bootstrap:
                 with open(self._meta_file_path, 'wb') as f:
                     pickle.dump(self.oob_splits, f)
 
-        self.is_multiclass = False
-
     def run(self, model):
         score_func = Scorer(multiclass=self.is_multiclass, labels=self.labels)
 

@@ -7,7 +7,7 @@ CONFIG_NAME = "main"
 
 
 @pytest.fixture(scope="function")
-def cfg_main(tmp_path):
+def cfg_tune(tmp_path):
     with initialize(version_base='1.3', config_path="../conf"):
         config = compose(config_name=CONFIG_NAME, return_hydra_config=True, overrides=[f"output_root={tmp_path}"])
 

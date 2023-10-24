@@ -1,28 +1,17 @@
-import os.path
 
+import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
+from src.evaluation._bootstrap import Bootstrap
+from pytest import mark
 
-from src.evaluation import bootstrap
-from src.pipeline.pipeline_components import get_feature_dataset
-
-
-def test_bootstrap_632plus():
-    _test_bootstrap('.632+')
-
-
-def test_bootstrap_632():
-    _test_bootstrap('.632')
-
-
-def test_bootstrap_oob():
-    _test_bootstrap('oob')
-
-
-def _test_bootstrap(bootstrap_method):
-    feature_dataset = get_feature_dataset(target_column='Grade',
-                                          existing_feature_df=os.path.join(os.path.dirname(__file__), 'extracted_features.csv'))
+@mark.parametrize('num_classes', [2,3])
+@mark.parametrize("bootstrap_method", ['oob','.632','.632+'])
+def test_bootstrap(tmp_path, bootstrap_method, num_classes):
+    # feature_dataset = get_feature_dataset(target_column='Grade',
+    #                                       existing_feature_df=os.path.join(os.path.dirname(__file__), 'extracted_features.csv'))
+    X = np.random.random([100, 500])
+    Y = np.random.randint(0, num_classes, 100)
 
     model = KNeighborsClassifier(3)
-
-    return bootstrap(model, feature_dataset.X, feature_dataset.y, iters=20, num_cpu=1,
-                     labels=[0, 1, 2], method=bootstrap_method)
+    evaluator = Bootstrap(X, Y, iters=5, num_cpu=1, log_dir=tmp_path, method=bootstrap_method)
+    evaluator.run(model)
