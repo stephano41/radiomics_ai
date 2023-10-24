@@ -1,4 +1,6 @@
+from collections.abc import Mapping
 import sys
+from sklearn.pipeline import Pipeline
 
 
 def get_size(obj, seen=None):
@@ -20,3 +22,14 @@ def get_size(obj, seen=None):
     elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
         size += sum([get_size(i, seen) for i in obj])
     return size
+
+
+def make_dict_pipeline(steps_dict):
+    steps = []
+    for name, step in steps_dict.items():
+        if isinstance(step, Mapping):
+            nested_pipeline = make_dict_pipeline(step)
+            steps.append((name, nested_pipeline))
+        else:
+            steps.append((name, step))
+    return Pipeline(steps)

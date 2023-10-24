@@ -161,6 +161,7 @@ class Preprocessor(OrigPreprocessor):
             try:
                 autoencoder = instantiate(self.autoencoder, _convert_='object')
             except hydra.errors.InstantiationException:
+                print("hydra instantiation of autoencoder failed, autoencoder better be a working object")
                 autoencoder = self.autoencoder
 
             steps.append(

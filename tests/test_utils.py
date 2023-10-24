@@ -1,17 +1,11 @@
+from pytest import mark
+
 from src.metrics.scorer import Scorer
 from sklearn.dummy import DummyClassifier
 import numpy as np
 
-
-def test_multiclass_scorer():
-    _testnclass_scorer(3)
-
-
-def test_binaryclass_scorer():
-    _testnclass_scorer(2)
-
-
-def _testnclass_scorer(n):
+@mark.parametrize('n', [2,3])
+def testnclass_scorer(n):
     scorer = Scorer(n>2)
 
     X = np.random.random([100, 10])

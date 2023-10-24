@@ -1,64 +1,21 @@
 # @package preprocessing.autoencoder
 
-_target_: sklearn.pipeline.make_pipeline
-_args_:
-    - _target_: src.preprocessing.SitkImageProcessor
-      data_dir: ${feature_dataset.data_dir}
-      image_stems: ${feature_dataset.image_stems}
-      mask_stem: ${feature_dataset.mask_stem}
-    - _target_: src.models.autoencoder.nn_encoder.Encoder
-      module: src.models.autoencoder.VanillaVAE
-      module__in_channels: 5
-      module__latent_dim: 128
-      module__hidden_dims: [32, 64, 128]
-      module__finish_size: 2
-      max_epochs: 100
-      batch_size: 10
-      verbose: 1
-      output_format: pandas
-      optimizer: torch.optim.AdamW
-      criterion: src.models.autoencoder.beta_vae.BetaVAELoss
-      criterion__kld_weight: 0.1
-      lr: 0.0001
-      iterator_train__augment_transforms:
-        _target_: torchio.Compose
-        transforms:
-            - _target_: torchio.RandomGamma
-              log_gamma: 0.1
-              label_keys: mask
-            - _target_: torchio.RandomAffine
-              p: 0.5
-              label_keys: mask
-              scales: 0.1
-              degrees: 0
-              translation: 0
-              isotropic: True
-            - _target_: torchio.RandomFlip
-              flip_probability: 0.5
-              label_keys: mask
-              axes: [0,1,2]
+defaults:
+    - /encoder_base.yaml
+    - _self_
 
-      dataset: src.dataset.skorch_subject_ds.SkorchSubjectsDataset
-      dataset__transform:
-        _target_: torchio.Compose
-        transforms:
-            - _target_: torchio.Resample
-              target: 1
-            - _target_: torchio.ToCanonical
-            - _target_: torchio.Mask
-              masking_method: mask
-              outside_value: 0
-            - _target_: torchio.CropOrPad
-              target_shape: [64,64,64]
-              mask_name: mask
-            - _target_: torchio.ZNormalization
-              masking_method: mask
+steps_dict:
+    autoencoder:
+        module: src.models.autoencoder.VanillaVAE
+        module__in_channels: 5
+        module__latent_dim: 128
+        module__hidden_dims: [32, 64, 128]
+        module__finish_size: 2
+        max_epochs: 100
+        batch_size: 10
+        criterion__kld_weight: 0.1
+        lr: 0.0001
 
-      callbacks:
-        - _target_: skorch.callbacks.EarlyStopping
-          load_best: True
-        - _target_: skorch.callbacks.GradientNormClipping
-          gradient_clip_value: 1
 
 
 
