@@ -4,17 +4,17 @@ defaults:
     - /encoder_base.yaml
     - _self_
 
-steps_dict:
-    autoencoder:
-        module: src.models.autoencoder.VanillaVAE
-        module__in_channels: 5
-        module__latent_dim: 128
-        module__hidden_dims: [32, 64, 128]
-        module__finish_size: 2
-        max_epochs: 100
-        batch_size: 10
-        criterion__kld_weight: 0.1
-        lr: 0.0001
+# steps_dict:
+#     autoencoder:
+module: src.models.autoencoder.VanillaVAE
+module__in_channels: 5
+module__latent_dim: 128
+module__hidden_dims: [32, 64, 128]
+module__finish_size: 2
+max_epochs: 100
+batch_size: 10
+criterion__kld_weight: 0.1
+lr: 0.0001
 
 
 

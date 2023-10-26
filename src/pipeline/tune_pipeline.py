@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def tune_pipeline(config):
     # setup dataset, extract features, split the data
-    feature_dataset = get_multimodal_feature_dataset(**config.feature_dataset)
+    feature_dataset = get_multimodal_feature_dataset(**OmegaConf.to_container(config.feature_dataset, resolve=True))
 
     output_dir = hydra.utils.HydraConfig.get().run.dir
     # save the feature_dataset

@@ -6,6 +6,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from src.evaluation.stratified_bootstrap import BootstrapGenerator
 from src.evaluation._bootstrap import Bootstrap
 import numpy as np
+from autorad.utils import io
 
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 
@@ -31,4 +32,10 @@ feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_dat
 feature_dataset = split_feature_dataset(feature_dataset,
                                         existing_split=os.path.join(output_dir,'splits.yml'))
 
-log_dataset(feature_dataset)
+dataset_config = {
+    "target": feature_dataset.target,
+    "ID_colname": feature_dataset.ID_colname,
+    "additional_features": feature_dataset.additional_features
+}
+
+io.save_yaml(dataset_config, "outputs/test_dataset_config.yaml")

@@ -20,10 +20,9 @@ def change_test_dir(monkeypatch):
 
 @pytest.fixture(scope="function")
 def cfg_tune(request, tmp_path):
-    yield _get_conf(CONFIG_NAME, tmp_path, request.param)
+    return _get_conf(CONFIG_NAME, tmp_path, request.param)
 
-    GlobalHydra.instance().clear()
-
+    # GlobalHydra.instance().clear()
 
 
 def _get_conf(config_name, tmp_path, overrides):

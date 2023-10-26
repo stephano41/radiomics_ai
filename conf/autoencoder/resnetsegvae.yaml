@@ -4,21 +4,21 @@ defaults:
     - encoder_base.yaml
     - _self_
 
-steps_dict:
-    autoencoder:
-        module: src.models.autoencoder.segresnet.SegResNetVAE2
-        module__input_image_size: [64, 64, 64]
-        module__spatial_dims: 3
-        module__in_channels: 5
-        module__out_channels: 5
-        module__dropout_prob: 0.2
-        module__init_filters: 32
-        batch_size: 4
-        max_epochs: 200
-        verbose: 1
-        criterion__kld_weight: 0.1
-        lr: 0.001
-        device: cuda
+# steps_dict:
+#     autoencoder:
+module: src.models.autoencoder.segresnet.SegResNetVAE2
+module__input_image_size: [64, 64, 64]
+module__spatial_dims: 3
+module__in_channels: 5
+module__out_channels: 5
+module__dropout_prob: 0.2
+module__init_filters: 32
+batch_size: 4
+max_epochs: 200
+verbose: 1
+criterion__kld_weight: 0.1
+lr: 0.001
+device: cuda
 
 
 
