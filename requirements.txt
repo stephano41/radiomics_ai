@@ -1,4 +1,4 @@
-autorad @ git+https://github.com/stephano41/AutoRadiomics.git@a2258c352b8788bb618a67757f4f56d04bee2c2a
+autorad @ git+https://github.com/stephano41/AutoRadiomics.git@d2c53e9176606699f1b784b61f089f6ea2cca800
 dcmrtstruct2nii
 pytest
 hydra-core
@@ -12,7 +12,6 @@ wandb
 torchio
 monai
 
---find-links https://download.pytorch.org/whl/cu117
 torch
 torchvision
 torchaudio

@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:latest
+FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 
 WORKDIR /opt/project
 
@@ -10,7 +10,6 @@ RUN  apt-get update && \
 COPY requirements.txt .
 
 RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt
-# RUN pip install --no-deps shap==0.42 pandas==1.4.3
 
 CMD ["mlflow", "ui", "--host=0.0.0.0", "--port=8000", "--backend-store-uri=./outputs/models"]
 EXPOSE 8000

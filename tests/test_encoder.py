@@ -24,7 +24,7 @@ def test_nn_encoder():
 
     encoder.transform(images)
 
-
+@mark.slow
 @mark.parametrize('cfg_tune', [f'experiments={e}' for e in ['meningioma','meningioma_autoencoder','wiki_sarcoma']], indirect=True)
 def test_encoder_instantiation(cfg_tune):
     if not cfg_tune.get('preprocessing', {}).get('autoencoder', False):
@@ -34,3 +34,5 @@ def test_encoder_instantiation(cfg_tune):
     encoder = instantiate(cfg_tune.preprocessing.autoencoder)
 
     assert isinstance(encoder, BaseEstimator)
+
+    encoder.fit([f'ID_{i+1}' for i in range(10)])

@@ -13,7 +13,11 @@ You can also run only the bootstrap portion of the pipeline to evaluate a model 
 
 **Meningioma**
  - radiomics only: `docker compose run app python main.py experiments=meningioma`
- - radiomics + deep learning autoencoder features: `docker comopose run app python main.py experiments=meningioma_autoencoder`
+ - radiomics + deep learning autoencoder features: `docker compose run app python main.py experiments=meningioma_autoencoder`
+
+Running as dockerfile:
+`sudo docker build . -t steven_container`
+`sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest python main.py`
 
 **Test runs**
  - with any experiment with autoencoder: `docker compose run app python main.py experiments={ANY_EXPERIMENT} "autoencoder=dummy_vae" "bootstrap.iters=5" "optimizer.n_trials=5"`
@@ -27,3 +31,4 @@ copy the generated token in the outputs, go to jupyter notebook and paste url an
 make sure the working directory in the notebook is correct before working
 ### Pytest
 To run pytests: `docker compose run app pytest`
+

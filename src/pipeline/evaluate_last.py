@@ -1,5 +1,6 @@
 import logging
 
+import hydra
 from autorad.inference.infer_utils import get_last_run_from_experiment_name, load_dataset_artifacts, \
     load_feature_dataset
 
@@ -27,3 +28,5 @@ def evaluate_last(config):
     logger.info(confidence_interval)
     log_ci2mlflow(confidence_interval, tpr_fpr,
                   run_id=last_run.run_id)
+
+    output_dir = hydra.utils.HydraConfig.get().run.dir

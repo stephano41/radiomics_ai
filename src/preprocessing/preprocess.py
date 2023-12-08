@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections
 import inspect
 import logging
 from pathlib import Path
@@ -7,14 +8,14 @@ from typing import Any
 
 import hydra.errors
 import joblib
+import pandas as pd
 from autorad.config import config
 from autorad.data import TrainingData, TrainingInput, TrainingLabels
-from autorad.feature_selection import create_feature_selector
-from autorad.preprocessing import Preprocessor as OrigPreprocessor, oversample_utils
+from autorad.preprocessing import Preprocessor as OrigPreprocessor
 from hydra.utils import instantiate
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import FunctionTransformer
+
 
 log = logging.getLogger(__name__)
 
@@ -102,107 +103,108 @@ class Preprocessor(OrigPreprocessor):
                          feature_selection_kwargs=feature_selection_kwargs,
                          random_state=random_state)
 
-    def fit_transform(
-            self, X: TrainingInput, y: TrainingLabels
-    ) -> tuple[TrainingInput, TrainingLabels]:
+    # def fit_transform(
+    #         self, X: TrainingInput, y: TrainingLabels
+    # ) -> tuple[TrainingInput, TrainingLabels]:
+    #
+    #     result_X = {}
+    #     result_y = {}
+    #     if self.oversampling_method is not None:
+    #         result_X["train"], result_y["train"] = self.pipeline.fit_resample(X.train, y.train)
+    #     else:
+    #         result_X["train"] = self.pipeline.fit_transform(X.train, y.train)
+    #         result_y["train"] = y.train
+    #
+    #     # allow for empty test set
+    #     if not X.test.empty:
+    #         result_X["test"] = self.pipeline.transform(X.test)
+    #         result_y["test"] = y.test
+    #     else:
+    #         result_X["test"] = None
+    #         result_y["test"] = None
+    #
+    #     if X.val is not None:
+    #         result_X["val"] = self.pipeline.transform(X.val)
+    #         result_y["val"] = y.val
+    #     if X.train_folds is not None and X.val_folds is not None:
+    #         (
+    #             result_X["train_folds"],
+    #             result_y["train_folds"],
+    #             result_X["val_folds"],
+    #             result_y["val_folds"],
+    #         ) = self._fit_transform_cv_folds(X, y)
+    #     X_preprocessed = TrainingInput(**result_X)
+    #     y_preprocessed = TrainingLabels(**result_y)
+    #     return X_preprocessed, y_preprocessed
+    #
+    # def _fit_transform_cv_folds(
+    #     self, X: TrainingInput, y: TrainingLabels
+    # ) -> tuple[
+    #     list[pd.DataFrame],
+    #     list[pd.Series],
+    #     list[pd.DataFrame],
+    #     list[pd.Series],
+    # ]:
+    #     if (
+    #         X.train_folds is None
+    #         or y.train_folds is None
+    #         or X.val_folds is None
+    #         or y.val_folds is None
+    #     ):
+    #         raise AttributeError("Folds are not set")
+    #     (
+    #         result_X_train_folds,
+    #         result_y_train_folds,
+    #         result_X_val_folds,
+    #         result_y_val_folds,
+    #     ) = ([], [], [], [])
+    #     for X_train, y_train, X_val in zip(
+    #         X.train_folds,
+    #         y.train_folds,
+    #         X.val_folds,
+    #     ):
+    #         cv_pipeline = self._build_pipeline()
+    #
+    #         if self.oversampling_method is not None:
+    #             result_df_X_train, result_y_train = cv_pipeline.fit_resample(X_train, y_train)
+    #         else:
+    #             result_df_X_train = cv_pipeline.fit_transform(X_train, y_train)
+    #             result_y_train = y_train
+    #
+    #         result_df_X_val = cv_pipeline.transform(X_val)
+    #
+    #         result_X_train_folds.append(result_df_X_train)
+    #         result_y_train_folds.append(result_y_train)
+    #         result_X_val_folds.append(result_df_X_val)
+    #     result_y_val_folds = y.val_folds
+    #     return (
+    #         result_X_train_folds,
+    #         result_y_train_folds,
+    #         result_X_val_folds,
+    #         result_y_val_folds,
+    #     )
 
-        result_X = {}
-        result_y = {}
-        transformed = self.pipeline.fit_transform(X.train, y.train)
-        if isinstance(transformed, tuple):
-            result_X["train"], result_y["train"] = transformed
-        else:
-            result_X["train"] = transformed
-            result_y["train"] = y.train
-        # allow for empty test set
-        if not X.test.empty:
-            result_X["test"] = self.pipeline.transform(X.test)
-            result_y["test"] = y.test
-        else:
-            result_X["test"] = None
-            result_y["test"] = None
-
-        if X.val is not None:
-            result_X["val"] = self.pipeline.transform(X.val)
-            result_y["val"] = y.val
-        if X.train_folds is not None and X.val_folds is not None:
-            (
-                result_X["train_folds"],
-                result_y["train_folds"],
-                result_X["val_folds"],
-                result_y["val_folds"],
-            ) = self._fit_transform_cv_folds(X, y)
-        X_preprocessed = TrainingInput(**result_X)
-        y_preprocessed = TrainingLabels(**result_y)
-        return X_preprocessed, y_preprocessed
-
-    def transform(self, X: TrainingInput):
-        result_X = {}
-        result_X["train"] = self.pipeline.transform(X.train)
-        # allow for empty test set
-        if not X.test.empty:
-            result_X["test"] = self.pipeline.transform(X.test)
-        else:
-            result_X["test"] = None
-
-        if X.val is not None:
-            result_X["val"] = self.pipeline.transform(X.val)
-        if X.train_folds is not None and X.val_folds is not None:
-            (
-                result_X["train_folds"],
-                result_X["val_folds"],
-            ) = self._transform_cv_folds(X)
-        X_preprocessed = TrainingInput(**result_X)
-        return X_preprocessed
 
     def _build_pipeline(self):
-        steps = []
+        pipeline = super()._build_pipeline()
         if self.autoencoder is not None:
             try:
                 autoencoder = instantiate(self.autoencoder, _convert_='object')
             except hydra.errors.InstantiationException:
+                if isinstance(self.autoencoder, collections.Mapping):
+                    raise TypeError("autoencoder passed couldn't be instantiated but is a dictionary like object")
                 print("hydra instantiation of autoencoder failed, autoencoder better be a working object")
                 autoencoder = self.autoencoder
 
-            steps.append(
+            pipeline.steps.insert(0,
                 ("autoencoder",
                  ColumnTransformer(transformers=[('autoencoder', autoencoder, self.encoder_colname)],
                                    remainder='passthrough',
                                    verbose_feature_names_out=False).set_output(transform='pandas'))
             )
 
-        if self.standardize:
-            steps.append(
-                (
-                    "standardize",
-                    StandardScaler().set_output(transform="pandas"),
-                )
-            )
-        if self.feature_selection_method is not None:
-            steps.append(
-                (
-                    "select",
-                    create_feature_selector(
-                        method=self.feature_selection_method,
-                        **self.feature_selection_kwargs,
-                    ),
-                ),
-            )
-        if self.oversampling_method is not None:
-            steps.append(
-                (
-                    "oversample",
-                    oversample_utils.OversamplerWrapper(
-                        oversample_utils.create_oversampling_model(
-                            method=self.oversampling_method,
-                            random_state=self.random_state,
-                        )
-                    ),
-                )
-            )
-        pipeline = Pipeline(steps)
         return pipeline
 
-    def get_params(self, deep=None):
-        return {key: getattr(self, key) for key in inspect.signature(Preprocessor.__init__).parameters.keys() if
-                key != "self"}
+    # def get_params(self, deep=None):
+    #     return {key: getattr(self, key) for key in inspect.signature(self.__init__).parameters.keys() if
+    #             key != "self"}

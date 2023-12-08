@@ -30,6 +30,7 @@ models:
   - Random Forest
   - SVM
   - XGBoost
+  - Logistic Regression
 
 preprocessing:
   use_feature_selection: True
@@ -38,7 +39,7 @@ preprocessing:
     - lasso
 #    boruta doesn't seem to work
 #    - boruta
-  use_oversampling: False
+  use_oversampling: True
   autoencoder:
   encoder_colname: 'ID'
 

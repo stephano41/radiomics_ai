@@ -43,7 +43,7 @@ def plot_roc_curve_with_ci(data_dict):
     tprs_lower = np.array(tprs_lower).T
 
     # Plot ROC curve
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(8, 6), dpi=300)
     plt.plot(mean_fpr, mean_tpr, color='b', label=f'Mean ROC (AUC = {mean_auc:.2f})')
     plt.fill_between(mean_fpr, tprs_lower.mean(axis=1), tprs_upper.mean(axis=1), color='grey', alpha=0.3,
                      label='Confidence Interval')

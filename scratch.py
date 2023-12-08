@@ -1,41 +1,30 @@
 import os
 
+import shap
+from autorad.inference.infer_utils import get_last_run_from_experiment_name, load_dataset_artifacts, \
+    load_feature_dataset
 from autorad.training.train_utils import log_dataset
 from sklearn.neighbors import KNeighborsClassifier
 
 from src.evaluation.stratified_bootstrap import BootstrapGenerator
 from src.evaluation._bootstrap import Bootstrap
 import numpy as np
-from autorad.utils import io
-
+import mlflow
+import joblib
+from sklearn import svm
+from src.utils.infer_utils import get_pipeline_from_last_run
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 
-output_dir = './outputs/meningioma/2023-09-01-01-32-46'
-# dataset = get_data('./data/meningioma_data', 't1ce', 'mask')
-# sitk_images = get_sitk_images(dataset, n_jobs=5)
 
-# setup dataset, extract features, split the data
-feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_data',
-                                                 image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
-                                                 mask_stem='mask',
-                                                 target_column='Grade',
-                                                 label_csv_path='./data/meningioma_meta.csv',
-                                                 extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
-                                                 feature_df_merger={'_target_': 'src.pipeline.df_mergers.meningioma_df_merger'},
-                                                 n_jobs=6,
-                                                 existing_feature_df= os.path.join(output_dir, 'extracted_features.csv'),
-                                                 additional_features=['ID']
-                                                 )
+# Create a Support Vector Machine (SVM) classifier
 
-# feature_dataset.df.to_csv("./outputs/meningioma_feature_dataset.csv")
+mlflow.set_tracking_uri("file://"+ os.path.abspath('./outputs/models'))
 
-feature_dataset = split_feature_dataset(feature_dataset,
-                                        existing_split=os.path.join(output_dir,'splits.yml'))
+run = get_last_run_from_experiment_name('meningioma+autoencoder')
+pipeline = get_pipeline_from_last_run('meningioma+autoencoder')
+dataset_artifacts = load_dataset_artifacts(run)
+feature_dataset = load_feature_dataset(feature_df=dataset_artifacts['df'],
+                                       dataset_config=dataset_artifacts['dataset_config'],
+                                       splits=dataset_artifacts['splits'])
 
-dataset_config = {
-    "target": feature_dataset.target,
-    "ID_colname": feature_dataset.ID_colname,
-    "additional_features": feature_dataset.additional_features
-}
-
-io.save_yaml(dataset_config, "outputs/test_dataset_config.yaml")
+pipeline.fit(feature_dataset.X, feature_dataset.y)

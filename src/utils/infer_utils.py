@@ -1,7 +1,7 @@
 import logging
 
 from autorad.inference.infer_utils import get_artifacts_from_best_run, get_artifacts_from_last_run
-from sklearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline
 
 log = logging.getLogger(__name__)
 
