@@ -48,7 +48,8 @@ optimizer:
 
 bootstrap:
     iters: 100
-    num_cpu: ${cpu_per_task}
+    cpus_per_process: ${cpu_per_task}
+    num_processes: ${n_cpu}
     labels: ${labels}
     method: '.632'
     alpha: 0.95

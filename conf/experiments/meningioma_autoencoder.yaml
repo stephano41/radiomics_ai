@@ -10,6 +10,4 @@ name: meningioma+autoencoder
 feature_dataset:
      additional_features: ['ID']
 
-bootstrap:
-    num_cpu: 1
 

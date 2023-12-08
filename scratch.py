@@ -1,30 +1,37 @@
-import os
+import torch
+import torch.multiprocessing as mp
+from tqdm import tqdm
 
-import shap
-from autorad.inference.infer_utils import get_last_run_from_experiment_name, load_dataset_artifacts, \
-    load_feature_dataset
-from autorad.training.train_utils import log_dataset
-from sklearn.neighbors import KNeighborsClassifier
-
-from src.evaluation.stratified_bootstrap import BootstrapGenerator
-from src.evaluation._bootstrap import Bootstrap
-import numpy as np
-import mlflow
-import joblib
-from sklearn import svm
-from src.utils.infer_utils import get_pipeline_from_last_run
-from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
+from src.models.autoencoder import Encoder
 
 
-# Create a Support Vector Machine (SVM) classifier
+def run(idx):
+    print(idx)
+    images = torch.randn([10, 1, 16, 16, 16]).type(torch.float32)
+    encoder = Encoder(module='src.models.autoencoder.DummyVAE',
+                                module__in_channels=1,
+                                module__latent_dim=64,
+                                module__hidden_dims=[8, 16, 32],
+                                module__finish_size=2,
+                                criterion='src.models.autoencoder.VAELoss',
+                                max_epochs=2,
+                                dataset='src.dataset.dummy_dataset.DummyDataset',
+                                device='cuda'
+                                )
+    encoder.fit(images)
+    encoder.transform(images)
 
-mlflow.set_tracking_uri("file://"+ os.path.abspath('./outputs/models'))
+    return idx[0]
 
-run = get_last_run_from_experiment_name('meningioma+autoencoder')
-pipeline = get_pipeline_from_last_run('meningioma+autoencoder')
-dataset_artifacts = load_dataset_artifacts(run)
-feature_dataset = load_feature_dataset(feature_df=dataset_artifacts['df'],
-                                       dataset_config=dataset_artifacts['dataset_config'],
-                                       splits=dataset_artifacts['splits'])
 
-pipeline.fit(feature_dataset.X, feature_dataset.y)
+def parallel_run(num_processes, num_rounds):
+    idxs = torch.randn([num_rounds,2])
+    scores = []
+    with mp.Pool(processes=num_processes) as pool:
+        for score in tqdm(pool.imap_unordered(run, idxs), total=len(idxs)):
+            scores.append(score)
+    print(scores)
+
+
+if __name__ == '__main__':
+    parallel_run(5, 10)

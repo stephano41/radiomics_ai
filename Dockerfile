@@ -10,6 +10,7 @@ RUN  apt-get update && \
 COPY requirements.txt .
 
 RUN --mount=type=cache,target=/root/.cache pip install -r requirements.txt
+#RUN pip install -r requirements.txt
 
 CMD ["mlflow", "ui", "--host=0.0.0.0", "--port=8000", "--backend-store-uri=./outputs/models"]
 EXPOSE 8000

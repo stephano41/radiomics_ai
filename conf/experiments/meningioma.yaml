@@ -15,12 +15,8 @@ feature_dataset:
 #     existing_feature_df: ./outputs/meningioma_feature_dataset.csv
 
 bootstrap:
-    iters: 300
+    iters: 500
 
 optimizer:
   n_trials: 300
 
-models:
-  - Random Forest
-  - SVM
-  - XGBoost

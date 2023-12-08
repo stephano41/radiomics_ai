@@ -1,9 +1,6 @@
-import json
-import multiprocessing
+import torch.multiprocessing as mp
 import os
-import time
 from functools import partial
-from pathlib import Path
 from typing import Dict
 
 import mlflow
@@ -21,8 +18,8 @@ from .stratified_bootstrap import BootstrapGenerator
 
 # metrics to include: positive predictive value, negative predictive, sensitivity, specificity, AUC
 class Bootstrap:
-    def __init__(self, X, Y, iters: int = 500, alpha: float = 0.95, num_cpu: int = 2, method: str = '.632',
-                 stratify=False, labels=None, log_dir=None):
+    def __init__(self, X, Y, iters: int = 500, alpha: float = 0.95, num_processes: int = 2, method: str = '.632',
+                 stratify=False, labels=None, log_dir=None, cpus_per_process=2):
         if method not in [".632", ".632+", "oob"]:
             raise ValueError(f"invalid bootstrap method {method}")
 
@@ -34,7 +31,8 @@ class Bootstrap:
         self.oob_splits = list(oob.split(X, Y))
 
         self.alpha = alpha
-        self.num_cpu = num_cpu
+        self.num_processes = num_processes
+        self.cpus_per_process=cpus_per_process
         self.method = method
         self.log_dir = log_dir
         self.labels = labels
@@ -65,8 +63,8 @@ class Bootstrap:
 
         partial_bootstrap = partial(self._one_bootstrap, model=model, scoring_func=score_func)
 
-        if self.num_cpu > 1:
-            with multiprocessing.get_context('spawn').Pool(self.num_cpu) as pool:
+        if self.num_processes > 1:
+            with mp.Pool(self.num_processes) as pool:
                 for score in tqdm(pool.imap_unordered(partial_bootstrap, self.oob_splits),
                                   total=len(self.oob_splits)):
                     self.scores.append(score)

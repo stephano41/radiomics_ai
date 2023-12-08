@@ -10,4 +10,7 @@ class DummyVAE(VanillaVAE):
         self = self.to(torch.float)
 
     def generate_latent_vars(self, x: Tensor, **kwargs) -> Tensor:
-        return torch.rand(x.shape[0], self.latent_dim)
+        # make sure the device works
+        result = torch.tensor([1.0], device=x.device) + torch.tensor([1.0], device=x.device)
+
+        return torch.rand(x.shape[0], self.latent_dim).to(x.device)
