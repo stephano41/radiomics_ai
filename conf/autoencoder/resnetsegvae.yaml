@@ -7,19 +7,20 @@ defaults:
 # steps_dict:
 #     autoencoder:
 module: src.models.autoencoder.segresnet.SegResNetVAE2
-module__input_image_size: [64, 64, 64]
+module__input_image_size: [96, 96, 96]
 module__spatial_dims: 3
 module__in_channels: 5
 module__out_channels: 5
 module__dropout_prob: 0.2
 module__init_filters: 32
-batch_size: 4
+batch_size: 3
 max_epochs: 200
 verbose: 1
 criterion__kld_weight: 0.1
 lr: 0.001
 device: cuda
 iterator_train__num_workers: ${cpu_per_task}
-iterator_valid__num_workers: ${cpu_per_task}
+iterator_valid__num_workers: 4
 iterator_train__persistent_workers: true
+iterator_valid__persistent_workers: true
 
