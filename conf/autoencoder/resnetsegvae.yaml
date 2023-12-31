@@ -7,7 +7,7 @@ defaults:
 # steps_dict:
 #     autoencoder:
 module: src.models.autoencoder.segresnet.SegResNetVAE2
-module__input_image_size: [64, 64, 64]
+module__input_image_size: [96, 96, 96]
 module__spatial_dims: 3
 module__in_channels: 5
 module__out_channels: 5

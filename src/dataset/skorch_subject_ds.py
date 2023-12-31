@@ -22,6 +22,17 @@ from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 class SkorchSubjectsDataset(SubjectsDataset):
     def __init__(self, X, y, data_dir, image_stems: Tuple[str, ...]=('image'), mask_stem='mask', transform=None,
                  load_getitem=True):
+        """
+        mask name is 'mask'
+        each subject as ID attribute as well
+        :param X:
+        :param y:
+        :param data_dir:
+        :param image_stems:
+        :param mask_stem:
+        :param transform:
+        :param load_getitem:
+        """
         self.data_dir = data_dir
         self.mask_stem = mask_stem
         self.image_stems = image_stems

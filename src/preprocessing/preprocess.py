@@ -1,20 +1,17 @@
 from __future__ import annotations
 
 import collections
-import inspect
 import logging
 from pathlib import Path
 from typing import Any
 
 import hydra.errors
 import joblib
-import pandas as pd
 from autorad.config import config
-from autorad.data import TrainingData, TrainingInput, TrainingLabels
+from autorad.data import TrainingData
 from autorad.preprocessing import Preprocessor as OrigPreprocessor
 from hydra.utils import instantiate
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import FunctionTransformer
 
 
 log = logging.getLogger(__name__)

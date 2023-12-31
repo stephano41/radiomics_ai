@@ -1,10 +1,12 @@
+import os
 
 import numpy as np
+import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from src.evaluation import Bootstrap
 from pytest import mark
 from sklearn.pipeline import make_pipeline
-
+from sklearn.dummy import DummyClassifier
 from src.models.autoencoder import Encoder
 
 
@@ -38,3 +40,21 @@ def test_bootstrap_multiprocessing(tmp_path):
     model = make_pipeline(encoder, estimator)
     evaluator = Bootstrap(X, Y, iters=12, num_processes=4, log_dir=tmp_path, method='.632')
     evaluator.run(model)
+
+
+def test_combined5x2ftest(tmp_path):
+    from autorad.data import FeatureDataset
+    from src.evaluation.f_test import combined_ftest_5x2cv
+
+    feature_dataset = FeatureDataset(pd.read_csv('./tests/meningioma_feature_dataset.csv'), ID_colname='ID', target='Grade')
+
+    model1 = DummyClassifier(strategy='most_frequent')
+    model2 = DummyClassifier(strategy='uniform')
+
+    f_stat, p_value = combined_ftest_5x2cv(model1, model2, feature_dataset, feature_dataset,
+                                           save_path=os.path.join(tmp_path, 'splits.yml'),
+                                           multi_class='raise',
+                                           labels=[0,1])
+
+    assert f_stat is not None
+    assert p_value is not None

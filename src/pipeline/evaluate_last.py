@@ -29,4 +29,3 @@ def evaluate_last(config):
     log_ci2mlflow(confidence_interval, tpr_fpr,
                   run_id=last_run.run_id)
 
-    output_dir = hydra.utils.HydraConfig.get().run.dir

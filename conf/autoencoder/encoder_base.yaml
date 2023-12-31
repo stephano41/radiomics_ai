@@ -49,7 +49,7 @@ dataset__transform:
           masking_method: mask
           outside_value: 0
         - _target_: torchio.CropOrPad
-          target_shape: [64,64,64]
+          target_shape: [96,96,96]
           mask_name: mask
         - _target_: torchio.ZNormalization
           masking_method: mask

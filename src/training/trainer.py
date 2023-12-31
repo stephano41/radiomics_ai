@@ -32,7 +32,7 @@ class Trainer(OrigTrainer):
         # self.num_classes = num_classes
 
         # self.auc_scorer = partial(roc_auc_score, average=average, multi_class=self.multi_class, labels=labels)
-        self.get_auc = partial(roc_auc, average=average, multi_class=self.multi_class, labels=labels)
+        self.get_auc = partial(roc_auc, average=average, multi_class=multi_class, labels=labels)
         self._existing_preprocess_kwargs = None
         super().__init__(dataset, models, result_dir)
 

@@ -1,37 +1,41 @@
-import torch
-import torch.multiprocessing as mp
-from tqdm import tqdm
+import logging
+import pandas as pd
+from autorad.data import FeatureDataset
 
-from src.models.autoencoder import Encoder
-
-
-def run(idx):
-    print(idx)
-    images = torch.randn([10, 1, 16, 16, 16]).type(torch.float32)
-    encoder = Encoder(module='src.models.autoencoder.DummyVAE',
-                                module__in_channels=1,
-                                module__latent_dim=64,
-                                module__hidden_dims=[8, 16, 32],
-                                module__finish_size=2,
-                                criterion='src.models.autoencoder.VAELoss',
-                                max_epochs=2,
-                                dataset='src.dataset.dummy_dataset.DummyDataset',
-                                device='cuda'
-                                )
-    encoder.fit(images)
-    encoder.transform(images)
-
-    return idx[0]
+from src.pipeline.pipeline_components import get_data, get_multimodal_feature_dataset, split_feature_dataset
+import os
 
 
-def parallel_run(num_processes, num_rounds):
-    idxs = torch.randn([num_rounds,2])
-    scores = []
-    with mp.Pool(processes=num_processes) as pool:
-        for score in tqdm(pool.imap_unordered(run, idxs), total=len(idxs)):
-            scores.append(score)
-    print(scores)
+log = logging.getLogger(__name__)
 
 
-if __name__ == '__main__':
-    parallel_run(5, 10)
+
+output_dir = './outputs/meningioma/2023-09-01-01-32-46'
+
+#
+feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_data',
+                                                 image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
+                                                 mask_stem='mask',
+                                                 target_column='Grade',
+                                                 label_csv_path='./data/meningioma_meta.csv',
+                                                 extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
+                                                 feature_df_merger={
+                                                     '_target_': 'src.pipeline.df_mergers.meningioma_df_merger'},
+                                                 n_jobs=6,
+                                                 existing_feature_df=os.path.join(output_dir, 'extracted_features.csv'),
+                                                 additional_features=['ID']
+                                                 )
+feature_dataset = split_feature_dataset(feature_dataset,
+                                        # save_path='outputs/test_splits.yml',
+                                        method='repeated_stratified_kfold_no_test',
+                                        n_splits=2, n_repeats=5)
+
+# print(feature_dataset.data.X)
+#
+# ds = SkorchSubjectsDataset(feature_dataset.X.ID, None, data_dir='./data/meningioma_data',
+#                            image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
+#                            mask_stem='mask',
+#                            transform=tio.Compose([tio.Resample(target=1),tio.ToCanonical(),tio.CropOrPad(target_shape=None, mask_name='mask')]))
+#
+# shapes = [ds[i][0].shape for i in range(len(ds))]
+# print(shapes)

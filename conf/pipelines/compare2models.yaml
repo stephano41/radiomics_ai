@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - main_pipeline.yaml
+  - _self_
+
+pipeline:
+    _target_: src.pipeline.compare2models
+
+model1_run_id: ???
+model2_run_id: ???
