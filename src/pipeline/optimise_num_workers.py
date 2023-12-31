@@ -21,7 +21,7 @@ def optimise_num_workers(config):
     dataset_train, _ = autoencoder.get_split_datasets(feature_dataset.X.ID, None)
 
     num_workers_range = list(range(2, mp.cpu_count(), 2))
-    batch_size_range = list(range(5, 35, 5))
+    batch_size_range = list(range(1, 5, 1))
     results = []
 
     best_config = None

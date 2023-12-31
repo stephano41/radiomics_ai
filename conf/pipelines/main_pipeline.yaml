@@ -40,6 +40,9 @@ preprocessing:
 #    boruta doesn't seem to work
 #    - boruta
   use_oversampling: True
+  oversampling_methods:
+    - SMOTE
+    - ADASYN
   autoencoder:
   encoder_colname: 'ID'
 

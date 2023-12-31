@@ -42,7 +42,7 @@ class Bootstrap:
         self.scores = []
 
         if log_dir is not None:
-            if os.path.exists(self._meta_file_path):
+            if os.path.exists(self._meta_file_path) and os.path.exists(self._scores_path):
                 #load the generator
                 with open(self._meta_file_path, 'rb') as f:
                     self.oob_splits = pickle.load(f)
@@ -64,6 +64,7 @@ class Bootstrap:
         partial_bootstrap = partial(self._one_bootstrap, model=model, scoring_func=score_func)
 
         if self.num_processes > 1:
+            mp.set_start_method('spawn', force=True)
             with mp.Pool(self.num_processes) as pool:
                 for score in tqdm(pool.imap_unordered(partial_bootstrap, self.oob_splits),
                                   total=len(self.oob_splits)):
