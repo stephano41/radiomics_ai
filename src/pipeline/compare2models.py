@@ -19,8 +19,8 @@ def compare2models(config):
     model1 = get_pipeline_from_run(model1_run.to_dictionary()['info'])
     model2 = get_pipeline_from_run(model2_run.to_dictionary()['info'])
 
-    dataset1_artifacts = load_dataset_artifacts(model1_run)
-    dataset2_artifacts = load_dataset_artifacts(model2_run)
+    dataset1_artifacts = load_dataset_artifacts(model1_run.to_dictionary()['info'])
+    dataset2_artifacts = load_dataset_artifacts(model2_run.to_dictionary()['info'])
 
     feature_dataset1 = FeatureDataset(dataframe=dataset1_artifacts['df'], **dataset1_artifacts['dataset_config'])
 

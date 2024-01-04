@@ -140,8 +140,8 @@ class Bootstrap:
             acc = 1 - (weight * test_err + (1.0 - weight) * train_err)
 
         if not self.is_multiclass:
-            roc_curve_metric = make_scorer(roc_curve)
-            roc_curve_results = roc_curve_metric(model, index_array(self.X, test_idx), index_array(self.Y, test_idx))
+            preds = model.predict_proba(index_array(self.X, test_idx))[:,1]
+            roc_curve_results = roc_curve(index_array(self.Y, test_idx), preds)
             return acc, dict(zip(['fpr', 'tpr', 'thresholds'], roc_curve_results))
         return acc, None
 

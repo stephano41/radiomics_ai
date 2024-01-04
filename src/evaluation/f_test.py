@@ -6,6 +6,7 @@ import scipy.stats
 import tempfile
 import os
 from src.metrics import roc_auc
+from tqdm import tqdm
 
 
 def combined_ftest_5x2cv(estimator1, estimator2, feature_dataset1: FeatureDataset, feature_dataset2: FeatureDataset,
@@ -36,7 +37,7 @@ def combined_ftest_5x2cv(estimator1, estimator2, feature_dataset1: FeatureDatase
     differences = []
 
     score_diffs = []
-    for i in range(len(data1.X.train_folds)):
+    for i in tqdm(range(len(data1.X.train_folds))):
         estimator1.fit(data1.X.train_folds[i], data1.y.train_folds[i])
         est1_score = scorer(data1.y.val_folds[i], estimator1.predict_proba(data1.X.val_folds[i]))
 
