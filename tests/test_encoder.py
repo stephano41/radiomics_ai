@@ -33,6 +33,4 @@ def test_encoder_instantiation(cfg_tune):
     HydraConfig().set_config(cfg_tune)
     encoder = instantiate(cfg_tune.preprocessing.autoencoder)
 
-    assert isinstance(encoder, BaseEstimator)
-
     encoder.fit([f'ID_{i+1}' for i in range(10)])

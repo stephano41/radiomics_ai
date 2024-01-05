@@ -1,4 +1,4 @@
-autorad @ git+https://github.com/stephano41/AutoRadiomics.git@32954e5c3b6373fb2a5d215aa2aae4c6eaa4dc03
+autorad @ git+https://github.com/stephano41/AutoRadiomics.git@4a8ee0c0b0db8fc4a7e594251e9e24249b385d0d
 dcmrtstruct2nii
 pytest
 hydra-core

@@ -31,18 +31,24 @@ models:
   - SVM
   - XGBoost
   - Logistic Regression
+  - KNN
+  - MLP
+  - DecisionTreeClassifier
 
 preprocessing:
   use_feature_selection: True
   feature_selection_methods:
     - anova
     - lasso
+    - linear_svc
+    - tree
 #    boruta doesn't seem to work
 #    - boruta
   use_oversampling: True
   oversampling_methods:
     - SMOTE
     - ADASYN
+    - BorderlineSMOTE
   autoencoder:
   encoder_colname: 'ID'
 

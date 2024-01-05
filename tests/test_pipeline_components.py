@@ -22,9 +22,10 @@ def test_auto_preprocessing(tmp_path, feature_dataset_path, additional_features,
 
     run_auto_preprocessing(data=feature_dataset.data,
                            result_dir=tmp_path,
-                           use_oversampling=False,
+                           use_oversampling=True,
+                           oversampling_methods=['SMOTE', 'ADASYN', 'BorderlineSMOTE'],
                            use_feature_selection=True,
-                           feature_selection_methods=['anova', 'lasso'],
+                           feature_selection_methods=['anova', 'lasso', 'linear_svc', 'tree'],
                            autoencoder=autoencoder
                            )
 
@@ -55,9 +56,10 @@ def test_trainer(tmp_path, feature_dataset_path, additional_features, autoencode
 
     run_auto_preprocessing(data=feature_dataset.data,
                            result_dir=tmp_path,
-                           use_oversampling=False,
+                           use_oversampling=True,
+                           oversampling_methods=['SMOTE', 'ADASYN', 'BorderlineSMOTE'],
                            use_feature_selection=True,
-                           feature_selection_methods=['anova', 'lasso'],
+                           feature_selection_methods=['anova', 'lasso', 'linear_svc', 'tree'],
                            autoencoder=autoencoder
                            )
 

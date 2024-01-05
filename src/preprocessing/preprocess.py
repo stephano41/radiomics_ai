@@ -188,7 +188,7 @@ class Preprocessor(OrigPreprocessor):
             try:
                 autoencoder = instantiate(self.autoencoder, _convert_='object')
             except hydra.errors.InstantiationException:
-                if isinstance(self.autoencoder, collections.Mapping):
+                if isinstance(self.autoencoder, collections.abc.Mapping):
                     raise TypeError("autoencoder passed couldn't be instantiated but is a dictionary like object")
                 print("hydra instantiation of autoencoder failed, autoencoder better be a working object")
                 autoencoder = self.autoencoder
