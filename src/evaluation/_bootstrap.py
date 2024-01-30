@@ -37,11 +37,11 @@ class Bootstrap:
         self.log_dir = log_dir
         self.labels = labels
 
-        self._meta_file_path = os.path.join(log_dir, 'oob_splits.pkl')
-        self._scores_path = os.path.join(log_dir, 'bootstrap_scores.pkl')
         self.scores = []
 
         if log_dir is not None:
+            self._meta_file_path = os.path.join(log_dir, 'oob_splits.pkl')
+            self._scores_path = os.path.join(log_dir, 'bootstrap_scores.pkl')
             if os.path.exists(self._meta_file_path) and os.path.exists(self._scores_path):
                 #load the generator
                 with open(self._meta_file_path, 'rb') as f:
