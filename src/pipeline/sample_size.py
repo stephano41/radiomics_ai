@@ -3,6 +3,8 @@ from pathlib import Path
 
 from autorad.models import MLClassifier
 from matplotlib import pyplot as plt
+import numpy as np
+from scipy.optimize import curve_fit
 from omegaconf import OmegaConf
 from sklearn.model_selection import train_test_split
 import hydra
@@ -72,7 +74,7 @@ def get_sample_size(config):
 
     logger.info('sample size calculation complete!')
     plot_confidence_intervals(sample_sizes, [interval['roc_auc'] for interval in confidence_intervals],
-                              y_label='roc_auc',
+                              y_label='ROC AUC',
                               save_dir=os.path.join(output_dir,'sample_size_calculation.png'))
 
 
@@ -85,19 +87,52 @@ def _get_sample_sizes(dataset_size, min=16):
     return exponentials
 
 
+def inverse_power_curve(x, a, b, c):
+    return (1-a) - b * np.power(x, c)
+
+def plot_inverse_power_curve(x, y, derivative_threshold=0.00001):
+    popt, _ = curve_fit(inverse_power_curve, x, y, bounds=([-np.inf, -np.inf, -1],[np.inf, np.inf, 0]))
+    last_x = x[-2]
+
+    derivative = 1
+    while derivative_threshold <= derivative:
+        if inverse_power_curve(last_x, *popt) > 1:
+            last_x /= 2
+            break
+        # Double the last sample size
+        last_x *= 2
+        # Compute the derivative of the curve at the last point
+        derivative = (inverse_power_curve(last_x, *popt) - inverse_power_curve(last_x / 2,*popt)) / (
+                                 last_x - last_x / 2)
+
+    sample_sizes_extended = np.linspace(x[0], last_x, 100)
+    curve_extended = inverse_power_curve(sample_sizes_extended, *popt)
+    plt.plot(sample_sizes_extended, curve_extended, '--', color='gray')
+
+
 def plot_confidence_intervals(sample_sizes, confidence_intervals, y_label='roc_auc', save_dir=None):
     """
     :param sample_sizes: list of numbers
     :param confidence_intervals: expects in list of tuples [(a,b),(c,d)...]
     :return:
     """
+    assert len(confidence_intervals) == len(sample_sizes)
     starts, ends = zip(*confidence_intervals)
-    plt.plot(sample_sizes, starts)
-    plt.plot(sample_sizes, ends)
-    plt.fill_between(sample_sizes, starts, ends, alpha=0.2)
+    plt.scatter(sample_sizes, starts, color='black', s=0)
+    plt.scatter(sample_sizes, ends, color='black', s=0)
+
+    for i, _ in enumerate(sample_sizes):
+        plt.plot([sample_sizes[i], sample_sizes[i]], [starts[i], ends[i]], '_-k')
+
+    plot_inverse_power_curve(sample_sizes, starts)
+
+    plot_inverse_power_curve(sample_sizes, ends)
+
     plt.xlabel('Sample Size')
     plt.ylabel(y_label)
     plt.grid(True)
+    plt.tight_layout()
     if save_dir is not None:
         plt.savefig(save_dir, dpi=300)
     plt.show()
+
