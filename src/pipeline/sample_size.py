@@ -136,3 +136,4 @@ def plot_confidence_intervals(sample_sizes, confidence_intervals, y_label='roc_a
     if save_dir is not None:
         plt.savefig(save_dir, dpi=300)
     plt.show()
+
