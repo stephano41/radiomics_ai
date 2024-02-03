@@ -1,6 +1,6 @@
-from datetime import datetime
-from pathlib import Path
-
+from collections import defaultdict
+import mlflow
+from autorad.data import FeatureDataset
 from autorad.models import MLClassifier
 from matplotlib import pyplot as plt
 import numpy as np
@@ -11,69 +11,51 @@ import hydra
 import os
 import logging
 
-from src.evaluation import Bootstrap
+from src.metrics import roc_auc
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
-from src.preprocessing import run_auto_preprocessing
-from src.training import Trainer
-from src.utils.infer_utils import get_pipeline_from_last_run
 
 
 logger = logging.getLogger(__name__)
 
 
 def get_sample_size(config):
+    run = mlflow.get_run(config.run_id)
+    artifact_uri = run.info.artifact_uri
+
+    model = MLClassifier.load_from_mlflow(f"{artifact_uri}/model")
+    pipeline = mlflow.sklearn.load_model(f'{artifact_uri}/preprocessor').pipeline
+    pipeline.steps.append(['estimator', model])
+
     feature_dataset = get_multimodal_feature_dataset(**OmegaConf.to_container(config.feature_dataset, resolve=True))
-    # feature_dataset = split_feature_dataset(feature_dataset,
-    #                                         save_path=os.path.join(output_dir, 'splits.yml'),
-    #                                         **config.split)
 
     dataset_size = len(feature_dataset.df)
     output_dir = hydra.utils.HydraConfig.get().run.dir
-    experiment_name = f"get_sample_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    confidence_intervals, tpr_fprs = [], []
     sample_sizes = _get_sample_sizes(dataset_size)
+    all_aucs = defaultdict(list)
     for sample_size in sample_sizes:
-        sample_x, _ = train_test_split(feature_dataset.df, test_size=sample_size,
+        logger.info(f'evaluating sample size of {sample_size}')
+        sample_x, _ = train_test_split(feature_dataset.df, train_size=sample_size,
                                      stratify=feature_dataset.y)
-        config.feature_dataset.existing_feature_df = sample_x
-        sample_feature_ds = get_multimodal_feature_dataset(**OmegaConf.to_container(config.feature_dataset, resolve=True))
+        sample_feature_ds = FeatureDataset(sample_x, target=config.feature_dataset.get('target_column', None), ID_colname='ID',
+                              additional_features=config.feature_dataset.get('additional_features', []))
         sample_feature_ds = split_feature_dataset(sample_feature_ds,
                                             save_path=os.path.join(output_dir, f'n={sample_size}_splits.yml'),
                                             **config.split)
 
-        if config.models is None:
-            models = MLClassifier.initialize_default_sklearn_models()
-        else:
-            models = [MLClassifier.from_sklearn(model_name) for model_name in config.models]
+        for X_train, y_train, X_val, y_val in zip(sample_feature_ds.data.X.train_folds,
+                                                  sample_feature_ds.data.y.train_folds,
+                                                  sample_feature_ds.data.X.val_folds,
+                                                  sample_feature_ds.data.y.val_folds):
+            pipeline.fit(X_train, y_train)
+            y_pred = pipeline.predict_proba(X_val)
 
-        run_auto_preprocessing(data=sample_feature_ds.data,
-                               result_dir=Path(output_dir),
-                               **OmegaConf.to_container(config.preprocessing, resolve=True))
+            auc = roc_auc(y_val, y_pred, multi_class=config.multi_class, labels=config.labels)
+            all_aucs[sample_size].append(auc)
 
-        trainer = Trainer(
-            dataset=sample_feature_ds,
-            models=models,
-            result_dir=output_dir,
-            multi_class=config.multi_class,
-            labels=config.labels
-        )
-
-        trainer.set_optimizer('optuna', n_trials=config.optimizer.n_trials)
-        trainer.run(auto_preprocess=True, experiment_name=experiment_name)
-
-        pipeline = get_pipeline_from_last_run(config.name)
-
-        evaluator = Bootstrap(feature_dataset.X, feature_dataset.y, **config.bootstrap)
-
-        confidence_interval, tpr_fpr = evaluator.run(pipeline)
-
-        confidence_intervals.append(confidence_interval)
-        tpr_fprs.append(tpr_fpr)
-
-        logger.info(confidence_interval)
+        logger.info(f'{sample_size} yielded auc of {np.nanmean(all_aucs[sample_size])}')
 
     logger.info('sample size calculation complete!')
-    plot_confidence_intervals(sample_sizes, [interval['roc_auc'] for interval in confidence_intervals],
+    plot_cv_sample_curve(sample_sizes, list(all_aucs.values()),
                               y_label='ROC AUC',
                               save_dir=os.path.join(output_dir,'sample_size_calculation.png'))
 
@@ -91,7 +73,7 @@ def inverse_power_curve(x, a, b, c):
     return (1-a) - b * np.power(x, c)
 
 def plot_inverse_power_curve(x, y, derivative_threshold=0.00001):
-    popt, _ = curve_fit(inverse_power_curve, x, y, bounds=([-np.inf, -np.inf, -1],[np.inf, np.inf, 0]))
+    popt, _ = curve_fit(inverse_power_curve, x, y, bounds=([-np.inf, -np.inf, -1],[np.inf, np.inf, 0]), maxfev=10000)
     last_x = x[-2]
 
     derivative = 1
@@ -110,23 +92,20 @@ def plot_inverse_power_curve(x, y, derivative_threshold=0.00001):
     plt.plot(sample_sizes_extended, curve_extended, '--', color='gray')
 
 
-def plot_confidence_intervals(sample_sizes, confidence_intervals, y_label='roc_auc', save_dir=None):
+def plot_cv_sample_curve(sample_sizes, cv_scores, y_label='ROC AUC', save_dir=None):
     """
     :param sample_sizes: list of numbers
-    :param confidence_intervals: expects in list of tuples [(a,b),(c,d)...]
+    :param cv_scores: expects in list of tuples [(a,b,c,d),(e,f,g,h)...]
     :return:
     """
-    assert len(confidence_intervals) == len(sample_sizes)
-    starts, ends = zip(*confidence_intervals)
-    plt.scatter(sample_sizes, starts, color='black', s=0)
-    plt.scatter(sample_sizes, ends, color='black', s=0)
+    assert len(cv_scores) == len(sample_sizes)
+    mean = np.nanmean(cv_scores)
+    plt.scatter(sample_sizes, mean, color='black', s=6)
 
     for i, _ in enumerate(sample_sizes):
-        plt.plot([sample_sizes[i], sample_sizes[i]], [starts[i], ends[i]], '_-k')
+        plt.scatter([sample_sizes[i]]*len(cv_scores[i]), cv_scores[i], color='red', s=1)
 
-    plot_inverse_power_curve(sample_sizes, starts)
-
-    plot_inverse_power_curve(sample_sizes, ends)
+    plot_inverse_power_curve(sample_sizes, mean)
 
     plt.xlabel('Sample Size')
     plt.ylabel(y_label)
