@@ -83,6 +83,7 @@ class Bootstrap:
 
         fpr_tpr = [t[1] for t in scores]
         final_fpr_tpr = None
+        final_y_pred = None
         if not self.is_multiclass:
             # unpack the fpr and tpr into a dictionary
             final_fpr_tpr = {'fpr': [], 'tpr': []}
@@ -92,7 +93,9 @@ class Bootstrap:
                 # final_fpr_tpr['thresholds'].append(d['thresholds'])
             final_fpr_tpr['auc'] = pd_scores['roc_auc'].tolist()
 
-        return ci, final_fpr_tpr
+            final_y_pred = [t[2] for t in scores]
+
+        return ci, final_fpr_tpr, final_y_pred
 
     def get_ci_each_col(self, df):
         result = {}
@@ -142,8 +145,8 @@ class Bootstrap:
         if not self.is_multiclass:
             preds = model.predict_proba(index_array(self.X, test_idx))[:,1]
             roc_curve_results = roc_curve(index_array(self.Y, test_idx), preds)
-            return acc, dict(zip(['fpr', 'tpr', 'thresholds'], roc_curve_results))
-        return acc, None
+            return acc, dict(zip(['fpr', 'tpr', 'thresholds'], roc_curve_results)), (index_array(self.Y, test_idx), preds)
+        return acc, None, None
 
 
 def log_ci2mlflow(ci_dict: Dict, tpr_fpr: dict = None, run_id=None):

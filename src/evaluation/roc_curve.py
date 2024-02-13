@@ -48,6 +48,7 @@ def plot_roc_curve_with_ci(data_dict):
     plt.fill_between(mean_fpr, tprs_lower.mean(axis=1), tprs_upper.mean(axis=1), color='grey', alpha=0.3,
                      label='Confidence Interval')
     plt.plot([0, 1], [0, 1], linestyle='--', color='gray', lw=2, label='Random')
+    plt.axis('scaled')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')

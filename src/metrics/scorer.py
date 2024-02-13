@@ -4,7 +4,6 @@ from typing import List
 import numpy as np
 import pandas as pd
 from sklearn.metrics import get_scorer, make_scorer, roc_curve
-from sklearn.metrics._scorer import _ThresholdScorer, _ProbaScorer
 
 from src.metrics import specificity, negative_predictive_value, roc_auc
 
@@ -98,15 +97,11 @@ class Scorer:
         """
         Get the predicted output of the estimator based on the given scorer.
         """
-        if isinstance(scorer, _ThresholdScorer):
-            try:
-                y_pred = estimator.decision_function(X)
-            except (NotImplementedError, AttributeError):
-                y_pred = estimator.predict_proba(X)
-            if y_pred.shape[1] <=2:
-                y_pred = y_pred[:, 1]
-        elif isinstance(scorer, _ProbaScorer):
+        try:
             y_pred = estimator.predict_proba(X)
-        else:
+        except (NotImplementedError, AttributeError):
             y_pred = estimator.predict(X)
+        
+        if y_pred.shape[1] <=2:
+            y_pred = y_pred[:, 1]
         return y_pred
