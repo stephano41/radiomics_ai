@@ -11,7 +11,8 @@ from sklearn.model_selection import train_test_split
 import hydra
 import os
 import logging
-
+import pickle
+import pandas as pd
 from src.evaluation import Bootstrap
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 from src.preprocessing import run_auto_preprocessing
@@ -32,11 +33,13 @@ def get_sample_size(config):
     output_dir = hydra.utils.HydraConfig.get().run.dir
     experiment_name = f"get_sample_{datetime.now().strftime('%Y%m%d%H%M%S')}"
     confidence_intervals, tpr_fprs = [], []
-    sample_sizes = _get_sample_sizes(dataset_size)
+    # sample_sizes = config.get('sample_sizes', _get_sample_sizes(dataset_size, 25))
+    sample_sizes = [90,80,70,60,50,40,30]
     for sample_size in sample_sizes:
         logger.info(f'evaluating at sample size {sample_size}')
-        sample_x, _ = train_test_split(feature_dataset.df, test_size=sample_size,
-                                     stratify=feature_dataset.y)
+        # _, sample_x = train_test_split(feature_dataset.df, test_size=sample_size,
+        #                              stratify=feature_dataset.y)
+        sample_x = split_sample_w_minority(feature_dataset.df, sample_size, 6, feature_dataset.y)
         sample_feature_ds = FeatureDataset(sample_x, target=config.feature_dataset.get('target_column', None), ID_colname='ID',
                               additional_features=config.feature_dataset.get('additional_features', []))
         sample_feature_ds = split_feature_dataset(sample_feature_ds,
@@ -72,6 +75,9 @@ def get_sample_size(config):
         confidence_intervals.append(confidence_interval)
         tpr_fprs.append(tpr_fpr)
 
+        with open(os.path.join(output_dir, f'sample_size_{sample_size}.pkl'), 'wb') as f:
+            pickle.dump(confidence_interval, f)
+
         logger.info(confidence_interval)
 
     logger.info('sample size calculation complete!')
@@ -86,7 +92,20 @@ def _get_sample_sizes(dataset_size, min=16):
         exponentials.append(min)
         min *= 2
     exponentials.append(dataset_size)
+    exponentials.reverse()
     return exponentials
+
+def split_sample_w_minority(df, final_size, minority_size, stratify_array):
+    if final_size==len(df):
+        return df
+    counts = stratify_array.value_counts()
+    minority_class = counts[counts == counts.min()].index[0]
+
+    minority_rows = df[stratify_array==minority_class].sample(minority_size)
+    _, random_rows = train_test_split(df.drop(minority_rows.index), test_size=final_size-minority_size, 
+                        stratify=stratify_array.drop(minority_rows.index))
+
+    return pd.concat([random_rows.reset_index(), minority_rows.reset_index()])
 
 
 def inverse_power_curve(x, a, b, c):

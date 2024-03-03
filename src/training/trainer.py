@@ -70,8 +70,8 @@ class Trainer(OrigTrainer):
 
             try:
                 model.fit(X_train, y_train)
-            except ValueError:
-                log.error(f"Training {model.name} failed.")
+            except ValueError as e:
+                log.error(f"Training {model.name} failed. \n{e}")
                 return np.nan
 
             y_pred = model.predict_proba(X_val)
