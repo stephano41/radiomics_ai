@@ -12,7 +12,7 @@ from autorad.training import Trainer as OrigTrainer, train_utils
 from autorad.utils import mlflow_utils
 from optuna.trial import Trial
 
-from src.metrics import roc_auc
+from src.metrics import roc_auc, pr_auc
 from src.preprocessing import Preprocessor
 
 log = logging.getLogger(__name__)
@@ -25,14 +25,21 @@ class Trainer(OrigTrainer):
                  result_dir: PathLike,
                  multi_class: str = "raise",
                  labels=None,
-                 average="macro"
+                 average="macro",
+                 metric='roc_auc'
                  ):
 
         self.multi_class = multi_class
         # self.num_classes = num_classes
 
         # self.auc_scorer = partial(roc_auc_score, average=average, multi_class=self.multi_class, labels=labels)
-        self.get_auc = partial(roc_auc, average=average, multi_class=multi_class, labels=labels)
+        if metric=='roc_auc':
+            self.get_auc = partial(roc_auc, average=average, multi_class=multi_class, labels=labels)
+        elif metric=='pr_auc':
+            self.get_auc = partial(pr_auc, average=average, multi_class=multi_class, labels=labels)
+        else:
+            raise ValueError(f'metric not implemented, got {metric}')
+
         self._existing_preprocess_kwargs = None
         super().__init__(dataset, models, result_dir)
 

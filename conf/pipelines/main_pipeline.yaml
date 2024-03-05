@@ -26,6 +26,9 @@ split:
   split_on:
   n_splits: 5
 
+trainer:
+  metric: roc_auc
+
 models:
   - Random Forest
   - SVM

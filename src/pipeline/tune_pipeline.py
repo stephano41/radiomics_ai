@@ -44,7 +44,8 @@ def tune_pipeline(config):
         models=models,
         result_dir=output_dir,
         multi_class=config.multi_class,
-        labels=config.labels
+        labels=config.labels,
+        **config.get('trainer',{})
     )
     if config.name is None:
         experiment_name = datetime.now().strftime('%Y%m%d%H%M%S')
