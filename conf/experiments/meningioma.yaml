@@ -17,5 +17,7 @@ bootstrap:
     iters: 500
 
 optimizer:
-  n_trials: 1000
+    n_trials: 1000
 
+analysis:
+    image_modalities: ${feature_dataset.image_stems}

@@ -67,5 +67,9 @@ bootstrap:
     alpha: 0.95
     stratify: True
 
+analysis:
+    compare_run_id:
+    image_modalities:
+    feature_classes: ['shape', 'firstorder', 'glcm', 'glrlm', 'glszm', 'gldm', 'ngtdm']
 
 
