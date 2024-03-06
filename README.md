@@ -22,6 +22,10 @@ Running as dockerfile:
 **Test runs**
  - with any experiment with autoencoder: `docker compose run app python main.py experiments={ANY_EXPERIMENT} "autoencoder=dummy_vae" "bootstrap.iters=5" "optimizer.n_trials=5"`
 
+**hydra terminal run tips**
+ - For config parameters that don't exist, you'll need to add a plus, for example:`+variable_name=VALUE` translates to config.variable_name: VALUE
+ - To pass a list of numbers in the terminal, don't use quotation marks around the list, for example: `sample_size="[10,20,30]"` translates to a list of strings whereas `sample_size=[10,20,30]` translates to a list of numbers
+
 ## Pycharm interpreter setup
 setup interpreter with pycharm using the docker compose interpreter setting, don't adjust any other run time settings 
 in pycharm (may result in breaks)
