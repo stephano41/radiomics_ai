@@ -15,6 +15,14 @@ You can also run only the bootstrap portion of the pipeline to evaluate a model 
  - radiomics only: `docker compose run app python main.py experiments=meningioma`
  - radiomics + deep learning autoencoder features: `docker compose run app python main.py experiments=meningioma_autoencoder`
 
+### Running Analysis pipeline
+ `docker compose run app python main.py experiments=meningioma pipeline._target_=src.pipeline.run_analysis`
+
+### Running evaluation pipeline only
+ `docker compose run app python main.py experiments=meningioma pipeline._target_=src.pipeline.evaluate_last`
+
+For running the analysis and evaluation pipeline, specifying a `run_id` argument will result in analysis/evaluation of that run_id, otherwise it'll default to the last run from the experiment name (`config.name`)
+
 Running as dockerfile:
 `sudo docker build . -t steven_container`
 `sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest python main.py`

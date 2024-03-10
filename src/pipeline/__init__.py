@@ -3,3 +3,4 @@ from .evaluate_last import evaluate_last
 from .tune_pipeline import tune_pipeline
 from .compare2models import compare2models
 from .sample_size import get_sample_size
+from .run_analysis import run_analysis

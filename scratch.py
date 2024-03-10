@@ -8,6 +8,8 @@ dataset = FeatureDataset(pd.read_csv('tests/meningioma_feature_dataset.csv'), ta
 
 f_stat, p_value = f_classif(dataset.X, dataset.y)
 
-indices = np.where(p_value < 0.05)[0]
+
+
+indices = np.where(p_value < 0.01)[0]
 selected_features = dataset.X.columns[indices].to_list()
 
