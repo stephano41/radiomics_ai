@@ -9,7 +9,7 @@ from omegaconf import OmegaConf
 
 from src.preprocessing import run_auto_preprocessing
 from src.training import Trainer
-from .evaluate_last import evaluate_last
+from .evaluate_run import evaluate_run
 from .pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 
 logger = logging.getLogger(__name__)
@@ -56,6 +56,6 @@ def tune_pipeline(config):
     trainer.run(auto_preprocess=True, experiment_name=experiment_name)
 
     # start evaluation
-    evaluate_last(config)
+    evaluate_run(config)
 
 # TODO calibration score?
