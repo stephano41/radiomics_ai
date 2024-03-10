@@ -10,6 +10,7 @@ from omegaconf import OmegaConf
 from src.preprocessing import run_auto_preprocessing
 from src.training import Trainer
 from .evaluate_run import evaluate_run
+from .run_analysis import run_analysis
 from .pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ def tune_pipeline(config):
     # setup dataset, extract features, split the data
     feature_dataset = get_multimodal_feature_dataset(**OmegaConf.to_container(config.feature_dataset, resolve=True))
 
-    output_dir = hydra.utils.HydraConfig.get().run.dir
+    output_dir = os.path.normpath(hydra.utils.HydraConfig.get().run.dir)
     # save the feature_dataset
     feature_dataset.df.to_csv(os.path.join(output_dir, 'extracted_features.csv'))
 
@@ -53,9 +54,12 @@ def tune_pipeline(config):
         experiment_name = config.name
 
     trainer.set_optimizer('optuna', n_trials=config.optimizer.n_trials)
-    trainer.run(auto_preprocess=True, experiment_name=experiment_name)
+    trainer.run(auto_preprocess=True, experiment_name=experiment_name,
+                mlflow_start_kwargs=dict(description=config.get('notes',None),
+                                         run_name=f'{output_dir.split("/")[-2]}@{output_dir.split("/")[-1]}'))
 
     # start evaluation
     evaluate_run(config)
 
-# TODO calibration score?
+    run_analysis(config)
+

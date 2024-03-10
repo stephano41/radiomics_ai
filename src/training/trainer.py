@@ -129,7 +129,6 @@ class Trainer(OrigTrainer):
         y_pred_proba = model.predict_proba(data.X.train)
 
         train_auc = self.get_auc(y_true, y_pred_proba)
-        print(mlflow.get_tracking_uri())
         mlflow.log_metric("AUC_train", float(train_auc))
 
     def save_best_preprocessor(self, best_trial_params: dict):

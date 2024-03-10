@@ -41,7 +41,7 @@ models:
 preprocessing:
   use_feature_selection: True
   feature_selection_methods:
-    - anova
+#     - anova
     - lasso
     - linear_svc
     - tree
