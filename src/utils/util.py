@@ -33,3 +33,4 @@ def make_dict_pipeline(steps_dict):
         else:
             steps.append((name, step))
     return Pipeline(steps)
+

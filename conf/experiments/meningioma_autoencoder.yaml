@@ -10,4 +10,5 @@ name: meningioma+autoencoder
 feature_dataset:
      additional_features: ['ID']
 
-
+analysis:
+    image_modalities: ['registered_adc', 't2', 'flair', 't1', 't1ce', 'SegResNet']

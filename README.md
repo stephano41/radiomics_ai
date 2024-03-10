@@ -6,7 +6,7 @@ Also contains data for wiki sarcoma, meningioma
 Build the container: `docker compose build`\
 Launch mlflow server to view runs: `docker compose up app`\
 Main pipeliine is run by using the `main.py` script and specifying an experiment config\
-You can also run only the bootstrap portion of the pipeline to evaluate a model by specifying `pipelines=evaluate_last`
+You can also run only the bootstrap portion of the pipeline to evaluate a model by specifying `pipelines=evaluate_run`
 ### Running experiments
 **Wikisarcoma**
  - radiomics: `docker compose run app python main.py experiments=wiki_sarcoma`
@@ -15,15 +15,49 @@ You can also run only the bootstrap portion of the pipeline to evaluate a model 
  - radiomics only: `docker compose run app python main.py experiments=meningioma`
  - radiomics + deep learning autoencoder features: `docker compose run app python main.py experiments=meningioma_autoencoder`
 
-Running as dockerfile:
-`sudo docker build . -t steven_container`
-`sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest python main.py`
+### Special Pipelines:
+<details>
+<summary>Evaluation only</summary>
+<code>docker compose run app python main.py experiments=meningioma pipeline._target_=src.pipeline.evaluate_run</code><br>
+Accepts a `run_id` argument to analyse a specific run, or it'll analyse the last run of the experiment name in the config
+</details>
+<details>
+<summary>Analysis pipeline</summary>
+<code>docker compose run app python main.py experiments=meningioma pipeline._target_=src.pipeline.run_analysis
+</code><br>
+Accepts a run_id argument to analyze a specific run, or it'll analyze the last run of the experiment name in the config.
+</details>
+<details>
+<summary>Compare2models pipeline</summary>
+<code>docker compose run app python main.py experiments=meningioma pipelines=compare2models model1_run_id=??? model2_run_id=???
+</code><br>
+Requires specifying `model1_run_id` and `model2_run_id` to get the model and dataset artifacts
+</details>
+
+### Viewing experiment results
+Results are stored between the hydra output folder and the artifacts folder of mlflow\
+All results can be viewed via mlflow, whereas the detailed run configs would be seen in the hydra output folder\
+To launch mlflow:\
+`docker compose up app`\
+If running as dockerfile:\
+`sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest mlflow ui --host=0.0.0.0 --port=8000 --backend-store-uri=./outputs/models`
+
+### Running as dockerfile:
+To build the image:\
+`sudo docker build . -t steven_container`\
+To use the image:\
+`sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest python main.py`\
+Replace python main.py with whatever commands\
 
 **Test runs**
- - with any experiment with autoencoder: `docker compose run app python main.py experiments={ANY_EXPERIMENT} "autoencoder=dummy_vae" "bootstrap.iters=5" "optimizer.n_trials=5"`
+ - with any experiment with autoencoder: `docker compose run app python main.py experiments={ANY_EXPERIMENT} "autoencoder=dummy_vae" "bootstrap.iters=5" "optimizer.n_trials=5 name=test_run"`
 
-## Pycharm interpreter setup
-setup interpreter with pycharm using the docker compose interpreter setting, don't adjust any other run time settings 
+**hydra terminal run tips**
+ - For config parameters that don't exist, you'll need to add a plus, for example:`+variable_name=VALUE` translates to config.variable_name: VALUE
+ - To pass a list of numbers in the terminal, don't use quotation marks around the list, for example: `sample_size="[10,20,30]"` translates to a list of strings whereas `sample_size=[10,20,30]` translates to a list of numbers
+
+### Pycharm interpreter setup
+Setup interpreter with pycharm using the docker compose interpreter setting, don't adjust any other run time settings 
 in pycharm (may result in breaks)
 ### Jupyter notebook setup
 run: `docker compose up jupyter`\

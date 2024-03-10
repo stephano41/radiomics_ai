@@ -41,7 +41,7 @@ models:
 preprocessing:
   use_feature_selection: True
   feature_selection_methods:
-    - anova
+#     - anova
     - lasso
     - linear_svc
     - tree
@@ -67,5 +67,9 @@ bootstrap:
     alpha: 0.95
     stratify: True
 
+analysis:
+    compare_run_id:
+    image_modalities:
+    feature_classes: ['shape', 'firstorder', 'glcm', 'glrlm', 'glszm', 'gldm', 'ngtdm']
 
 
