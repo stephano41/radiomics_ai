@@ -42,9 +42,11 @@ preprocessing:
   use_feature_selection: True
   feature_selection_methods:
 #     - anova
-    - lasso
+    - {_method_: lasso, n_jobs: 5}
     - linear_svc
     - tree
+    - {_method_: sf, n_jobs: 5}
+    - {_method_: rfe, n_jobs: 5}
 #    boruta doesn't seem to work
 #    - boruta
   use_oversampling: True

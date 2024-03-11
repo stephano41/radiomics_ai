@@ -59,7 +59,7 @@ def run_auto_preprocessing(
 
     preprocessed = {}
     for selection_method in feature_selection_methods:
-        preprocessed[selection_method] = {}
+        preprocessed[str(selection_method)] = {}
         for oversampling_method in oversampling_methods:
             preprocessor = Preprocessor(
                 standardize=True,
@@ -69,15 +69,15 @@ def run_auto_preprocessing(
                 encoder_colname=encoder_colname
             )
             try:
-                preprocessed[selection_method][
-                    oversampling_method
+                preprocessed[str(selection_method)][
+                    str(oversampling_method)
                 ] = preprocessor.fit_transform_data(data)
             except AssertionError:
                 log.error(
                     f"Preprocessing failed with {selection_method} and {oversampling_method}."
                 )
-        if not preprocessed[selection_method]:
-            del preprocessed[selection_method]
+        if not preprocessed[str(selection_method)]:
+            del preprocessed[str(selection_method)]
     with open(Path(result_dir) / "preprocessed.pkl", "wb") as f:
         joblib.dump((preprocessed, preprocessor.get_params()), f)
 
@@ -87,7 +87,6 @@ class Preprocessor(OrigPreprocessor):
                  standardize: bool = True,
                  feature_selection_method: str | None = None,
                  oversampling_method: str | None = None,
-                 feature_selection_kwargs: dict[str, Any] | None = None,
                  random_state: int = config.SEED,
                  autoencoder=None,
                  encoder_colname='ID'
@@ -97,7 +96,6 @@ class Preprocessor(OrigPreprocessor):
         super().__init__(standardize=standardize,
                          feature_selection_method=feature_selection_method,
                          oversampling_method=oversampling_method,
-                         feature_selection_kwargs=feature_selection_kwargs,
                          random_state=random_state)
 
     # def fit_transform(
