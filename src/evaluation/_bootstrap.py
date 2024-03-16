@@ -85,13 +85,7 @@ class Bootstrap:
         final_fpr_tpr = None
         final_y_pred = None
         if not self.is_multiclass:
-            # unpack the fpr and tpr into a dictionary
-            final_fpr_tpr = {'fpr': [], 'tpr': []}
-            for d in fpr_tpr:
-                final_fpr_tpr['fpr'].append(d['fpr'])
-                final_fpr_tpr['tpr'].append(d['tpr'])
-                # final_fpr_tpr['thresholds'].append(d['thresholds'])
-            final_fpr_tpr['auc'] = pd_scores['roc_auc'].tolist()
+            final_fpr_tpr = fpr_tpr
 
             final_y_pred = [t[2] for t in scores]
 
@@ -119,7 +113,6 @@ class Bootstrap:
     def _one_bootstrap(self, idx, model, scoring_func):
         train_idx = idx[0]
         test_idx = idx[1]
-        # print('hey')
         model.fit(index_array(self.X, train_idx), index_array(self.Y, train_idx))
 
         test_acc = scoring_func(model, index_array(self.X, test_idx), index_array(self.Y, test_idx))
@@ -160,7 +153,9 @@ def log_ci2mlflow(ci_dict: Dict, tpr_fpr: dict = None, run_id=None):
         # log original confidence interval dict for future presentation
         mlflow.log_dict(ci_dict, "confidence_intervals.json")
         if tpr_fpr is not None:
-            mlflow.log_figure(plot_roc_curve_with_ci(tpr_fpr), 'roc_curve.png', save_kwargs={'dpi':300})
+            roc_fig, optimal_thresholds = plot_roc_curve_with_ci(tpr_fpr)
+            mlflow.log_figure(roc_fig, 'roc_curve.png', save_kwargs={'dpi':300})
+            mlflow.log_metrics(optimal_thresholds, "optimal_thresholds.json")
         # log to metrics to display in mlflow
         mlflow.log_metrics(metrics_dict)
 

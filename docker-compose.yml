@@ -33,4 +33,4 @@ services:
         container_name: mri_sarcoma_ai_notebook
         ports:
             - 8888:8888
-        command: jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --no-browser
+        command: jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --no-browser --NotebookApp.token=eabc82b4d609af51618a78b0e93f791ff106b626a0c07ab7

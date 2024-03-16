@@ -384,6 +384,7 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
 
 
 def plot_shap_bar(shap_values, max_display=10, save_dir=None, size=None):
+    plt.close('all')
     ax = custom_shap_bar(shap_values, max_display=max_display, show=False)
     fig = plt.gcf()
 
@@ -414,6 +415,7 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
     categories = [x[0] for x in sorted_feature_values]
     values = [x[1] for x in sorted_feature_values]
 
+    plt.close('all')
     plt.barh(categories, values)
 
     for index, value in enumerate(values):

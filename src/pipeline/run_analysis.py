@@ -17,7 +17,7 @@ def run_analysis(config):
         logger.info(f'no run speicified in config, getting the last run from {config.name} instead')
         run = get_last_run_from_experiment_name(config.name)
 
-    logger.info(f'evaluating {run.run_id}')
+    logger.info(f'analysing {run.run_id}')
     output_dir = run.artifact_uri.removeprefix('file://')
 
     if config.analysis.get('compare_run_id', None) is not None:
@@ -31,9 +31,10 @@ def run_analysis(config):
                   save_dir=os.path.join(output_dir, 'shap_bar_plot_overview.png'),
                   size=(25, 48))
     if config.analysis.get('image_modalities', None) is not None:
-        summate_shap_bar(shap_values, config.image_modalities,
+        summate_shap_bar(shap_values, config.analysis.image_modalities,
                          save_dir=os.path.join(output_dir, 'shap_bar_image_modalities.png'))
     summate_shap_bar(shap_values, config.analysis.feature_classes,
-                     save_dir=os.path.join(output_dir, 'shap_bar_image_modalities.png'))
-    if config.multi_class != 'raise':
+                     save_dir=os.path.join(output_dir, 'shap_bar_feature_classe.png'))
+    if config.multi_class == 'raise':
+        # only do this if binary cases
         plot_calibration_curve(run, save_dir=os.path.join(output_dir, 'calibration_curve.png'))

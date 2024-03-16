@@ -42,10 +42,10 @@ preprocessing:
   use_feature_selection: True
   feature_selection_methods:
 #     - anova
-    - {_method_: lasso, n_jobs: 5}
+    - lasso
     - linear_svc
     - tree
-    - {_method_: sf, n_jobs: 5}
+    - {_method_: sf, direction: backward, n_jobs: 5, tol: 0.05}
     - {_method_: rfe, n_jobs: 5}
 #    boruta doesn't seem to work
 #    - boruta

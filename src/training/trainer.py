@@ -47,10 +47,11 @@ class Trainer(OrigTrainer):
             self,
             auto_preprocess: bool = False,
             experiment_name="model_training",
+            mlflow_start_kwargs={}
     ):
         if auto_preprocess:
             _, self._existing_preprocess_kwargs = self.get_preprocessed_pickle()
-        super().run(auto_preprocess, experiment_name)
+        super().run(auto_preprocess, experiment_name, mlflow_start_kwargs)
 
     def _objective(self, trial: Trial, auto_preprocess=False) -> float:
         """Get params from optuna trial, return the metric."""

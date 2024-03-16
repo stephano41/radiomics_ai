@@ -12,10 +12,10 @@ from sklearn.linear_model import LogisticRegression
 
 
 class SFSelector(AnovaSelector):
-    def __init__(self, direction='backward', scoring='roc_auc'):
+    def __init__(self, direction='backward', scoring='roc_auc', n_jobs=None, ):
         self.direction=direction
         self.scoring=scoring
-        self.model = SequentialFeatureSelector(LogisticRegression(), direction=direction, scoring=scoring)
+        self.model = SequentialFeatureSelector(LogisticRegression(), direction=direction, scoring=scoring, n_jobs=5, n_features_to_select='auto', tol=0.05)
         super().__init__()
 
     def fit(self, X, y):
@@ -34,7 +34,7 @@ class RFESelector(AnovaSelector):
     def __init__(self, min_features=2, scoring='roc_auc'):
         self.min_features=min_features
         self.scoring=scoring
-        self.model = RFECV(LogisticRegression(), min_features_to_select=min_features, scoring=scoring)
+        self.model = RFECV(LogisticRegression(), min_features_to_select=min_features, scoring=scoring, verbose=1, n_jobs=5)
         super().__init__()
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
@@ -91,14 +91,20 @@ def generate_feature_name_col(y):
 dataset = FeatureDataset(pd.read_csv('tests/meningioma_feature_dataset.csv'), target='Grade', ID_colname='ID')
 
 # iccs = get_feature_icc(dataset.X, dataset.y)
-
+import time
+start = time.time()
 sfselector = SFSelector()
 sfselector.fit(dataset.X, dataset.y)
-print(sfselector.selected_features)
+print(len(sfselector.selected_features))
+print(time.time() - start)
 
-sfselector = RFESelector()
-sfselector.fit(dataset.X, dataset.y)
-print(sfselector.selected_features)
+# start = time.time()
+
+# sfselector = RFESelector()
+# sfselector.fit(dataset.X, dataset.y)
+# print(sfselector.selected_features)
+# print(time.time() - start)
+
 
 # icc_results = []
 # for feature_name in dataset.X.columns:

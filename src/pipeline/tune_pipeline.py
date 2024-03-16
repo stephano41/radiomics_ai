@@ -33,12 +33,12 @@ def tune_pipeline(config):
         models = MLClassifier.initialize_default_sklearn_models()
     else:
         models = [MLClassifier.from_sklearn(model_name) for model_name in config.models]
-
+    logger.info('models initialised, starting auto preprocessing')
     # run auto preprocessing
     run_auto_preprocessing(data=feature_dataset.data,
                            result_dir=Path(output_dir),
                            **OmegaConf.to_container(config.preprocessing, resolve=True))
-
+    logger.info('preprocessing finished, starting hyperparameter tuning') 
     # start training
     trainer = Trainer(
         dataset=feature_dataset,
@@ -57,9 +57,11 @@ def tune_pipeline(config):
     trainer.run(auto_preprocess=True, experiment_name=experiment_name,
                 mlflow_start_kwargs=dict(description=config.get('notes',None),
                                          run_name=f'{output_dir.split("/")[-2]}@{output_dir.split("/")[-1]}'))
-
+    
+    logger.info('hyperparameter tuning finished, starting evaluation') 
     # start evaluation
     evaluate_run(config)
 
+    logger.info('evaluation finished, starting analysis pipeline') 
     run_analysis(config)
 

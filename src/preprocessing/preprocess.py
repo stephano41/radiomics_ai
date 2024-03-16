@@ -69,6 +69,7 @@ def run_auto_preprocessing(
                 encoder_colname=encoder_colname
             )
             try:
+                log.info(f'preprocessing {selection_method} with {oversampling_method}')
                 preprocessed[str(selection_method)][
                     str(oversampling_method)
                 ] = preprocessor.fit_transform_data(data)
