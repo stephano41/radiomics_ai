@@ -47,12 +47,14 @@ from src.models.autoencoder.med3d_resnet import med3d_resnet10,ResNetEncoder
 import torch
 import time
 from src.models.autoencoder import SegResNetVAE2, BetaVAELoss, Encoder
+from src.models.utils import get_total_params
 from skorch.callbacks import EarlyStopping, GradientNormClipping
 from src.dataset import TransformingDataLoader, SkorchSubjectsDataset
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset
 import torchio as tio
 import matplotlib.pyplot as plt
 from datetime import datetime
+from sklearn.model_selection import ParameterGrid
 
 
 def plot_slices(output_tensor, slice_index, num_samples=5, original_tensor=None,
@@ -71,6 +73,7 @@ def plot_slices(output_tensor, slice_index, num_samples=5, original_tensor=None,
         None
     """
     batch_size, num_modalities, length, width, height = output_tensor.shape
+    plt.close('all')
 
     for sample_idx in range(min(num_samples, batch_size)):
         plt.figure(figsize=(15, 5))  # Adjust the figure size as needed
@@ -117,7 +120,7 @@ dataset_train_transform = tio.Compose([tio.Resample((1, 1, 1)),
                                                     tio.CropOrPad(target_shape=(96, 96, 96), mask_name='mask'),
                                                     tio.ZNormalization(masking_method='mask')])
 
-encoder = Encoder(ResNetEncoder,
+encoder_kwargs = dict(module= ResNetEncoder,
                     module__input_image_size=[96, 96, 96],
                     module__spatial_dims=3,
                     module__in_channels=5,
@@ -152,17 +155,24 @@ encoder = Encoder(ResNetEncoder,
                     dataset__data_dir='./data/meningioma_data',
                     dataset__image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
                     dataset__mask_stem='mask',
-                    criterion__kld_weight=0.1,
+                    criterion__kld_weight=0.00025,
+                    criterion__beta=4,
+                    criterion__loss_type='H',
                     device='cuda'
                     )
 
-
 # restnet10 = med3d_resnet10(input_image_size=[96,96,96], shortcut_type='B', in_channels=5)
 
-encoder.fit(id_list)
+parameter_grid = ParameterGrid({'criterion__loss_type':['B'],'criterion__gamma':[2,4,6,8,16,32],'criterion__max_capacity':[5,25,50,100], 'criterion__Capacity_max_iter':[1e2,1e3,1e4,1e5,1e6]})
 
-with torch.no_grad():
-    output, in_x, _, _ = encoder.forward(id_list[:10], training=False, device='cuda')
+for params in parameter_grid:
+    print(f'testing {params}')
+    encoder = Encoder(**encoder_kwargs)
+    encoder.set_params(**params)
 
+    encoder.fit(id_list)
+    with torch.no_grad():
+        output, in_x, _, _ = encoder.forward(id_list[:10], training=False, device='cuda')
+    # print(get_total_params(encoder))11
 
-plot_slices(output.detach().cpu(), 48, 5, in_x.detach().cpu(), "med3d resnet10", f'outputs/encoder_generated_images/med3d_resnet10/{datetime.now().strftime("%Y%m%d-%H%M%S")}')
+    plot_slices(output.detach().cpu(), 48, 5, in_x.detach().cpu(), "med3d resnet10", f'outputs/encoder_generated_images/med3d_resnet10/{params}')
