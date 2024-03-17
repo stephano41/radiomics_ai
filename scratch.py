@@ -1,52 +1,10 @@
 from collections import defaultdict
 
 import pandas as pd
-from sklearn.datasets import make_classification
-from sklearn.feature_selection import SelectKBest, f_classif
 import numpy as np
 from autorad.data import FeatureDataset
 import pingouin as pg
-from autorad.feature_selection.selector import AnovaSelector, CoreSelector
-from sklearn.feature_selection import RFECV, SequentialFeatureSelector
-from sklearn.linear_model import LogisticRegression
-
-
-class SFSelector(AnovaSelector):
-    def __init__(self, direction='backward', scoring='roc_auc', n_jobs=None, ):
-        self.direction=direction
-        self.scoring=scoring
-        self.model = SequentialFeatureSelector(LogisticRegression(), direction=direction, scoring=scoring, n_jobs=5, n_features_to_select='auto', tol=0.05)
-        super().__init__()
-
-    def fit(self, X, y):
-        indices = self.run_anova(X, y, True)
-        _X = X.iloc[:, indices]
-
-        self.model.fit(_X,y)
-        support = self.model.get_support(indices=True)
-        if support is None:
-            raise ValueError("SFSelector failed to select features")
-        selected_columns = support.tolist()
-        self._selected_features=_X.columns[selected_columns].tolist()
-
-
-class RFESelector(AnovaSelector):
-    def __init__(self, min_features=2, scoring='roc_auc'):
-        self.min_features=min_features
-        self.scoring=scoring
-        self.model = RFECV(LogisticRegression(), min_features_to_select=min_features, scoring=scoring, verbose=1, n_jobs=5)
-        super().__init__()
-
-    def fit(self, X: pd.DataFrame, y: pd.Series):
-        indices = self.run_anova(X, y, True)
-        _X = X.iloc[:, indices]
-
-        self.model.fit(_X,y)
-        support = self.model.get_support(indices=True)
-        if support is None:
-            raise ValueError("RFESelector failed to select features")
-        selected_columns = support.tolist()
-        self._selected_features=_X.columns[selected_columns].tolist()
+from autorad.feature_selection.selector import CoreSelector
 
 
 class ICCSelector(CoreSelector):
@@ -85,39 +43,126 @@ def generate_feature_name_col(y):
 
 
 
-
-
-
-dataset = FeatureDataset(pd.read_csv('tests/meningioma_feature_dataset.csv'), target='Grade', ID_colname='ID')
-
-# iccs = get_feature_icc(dataset.X, dataset.y)
+from src.models.autoencoder.med3d_resnet import med3d_resnet10,ResNetEncoder
+import torch
 import time
-start = time.time()
-sfselector = SFSelector()
-sfselector.fit(dataset.X, dataset.y)
-print(len(sfselector.selected_features))
-print(time.time() - start)
-
-# start = time.time()
-
-# sfselector = RFESelector()
-# sfselector.fit(dataset.X, dataset.y)
-# print(sfselector.selected_features)
-# print(time.time() - start)
+from src.models.autoencoder import SegResNetVAE2, BetaVAELoss, Encoder
+from skorch.callbacks import EarlyStopping, GradientNormClipping
+from src.dataset import TransformingDataLoader, SkorchSubjectsDataset
+from src.pipeline.pipeline_components import get_multimodal_feature_dataset
+import torchio as tio
+import matplotlib.pyplot as plt
+from datetime import datetime
 
 
-# icc_results = []
-# for feature_name in dataset.X.columns:
-#     feature_name_col = pd.Series([f"feature_name_{i}" for i in range(len(dataset.y))], name='Feature Name')
-#     combined_df = pd.concat([feature_name_col, dataset.y, dataset.X[feature_name]], axis=1)
-#     icc_results.append(
-#         pg.intraclass_corr(data=combined_df, targets='Feature Name', raters='Grade', ratings=feature_name, nan_policy='omit'))
-#     print(icc_results)
-#     break
-# f_stat, p_value = f_classif(dataset.X, dataset.y)
-#
-#
-#
-# indices = np.where(p_value < 0.01)[0]
-# selected_features = dataset.X.columns[indices].to_list()
+def plot_slices(output_tensor, slice_index, num_samples=5, original_tensor=None,
+                title=None, save_dir=None):
+    """
+    Plot a slice from each image modality of the output tensor for a specified number of samples.
 
+    Parameters:
+        output_tensor (torch.Tensor): The output tensor from the autoencoder.
+        slice_index (int): The index of the slice to be plotted.
+        image_modalities (list): List of image modality names.
+        num_samples (int): The number of samples to plot.
+        title_prefix (str): Prefix to add to the plot titles.
+
+    Returns:
+        None
+    """
+    batch_size, num_modalities, length, width, height = output_tensor.shape
+
+    for sample_idx in range(min(num_samples, batch_size)):
+        plt.figure(figsize=(15, 5))  # Adjust the figure size as needed
+
+        for modality_idx in range(num_modalities):
+            plt.subplot(2, num_modalities, modality_idx + 1)
+            plt.imshow(output_tensor[sample_idx, modality_idx, slice_index, :, :], cmap='gray')
+            plt.title(f'generated Sample {sample_idx + 1}, {modality_idx}')
+            plt.axis('off')
+
+        if original_tensor is not None:
+            for modality_idx in range(num_modalities):
+                plt.subplot(2, num_modalities, num_modalities + modality_idx + 1)
+                plt.imshow(original_tensor[sample_idx, modality_idx, slice_index, :, :], cmap='gray')
+                plt.title(f'original Sample {sample_idx + 1}, {modality_idx}')
+                plt.axis('off')
+
+        if title is not None:
+            plt.suptitle(title)
+        if save_dir is not None:
+            plt.savefig(save_dir+f'_{sample_idx}.png')
+
+        plt.show()  
+
+
+
+feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_data',
+                                                 image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
+                                                 mask_stem='mask',
+                                                 target_column='Grade',
+                                                 label_csv_path='./data/meningioma_meta.csv',
+                                                 extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
+                                                 feature_df_merger={
+                                                     '_target_': 'src.pipeline.df_mergers.meningioma_df_merger'},
+                                                 n_jobs=6,
+                                                 existing_feature_df='tests/meningioma_feature_dataset.csv',
+                                                 additional_features=['ID']
+                                                 )
+id_list = feature_dataset.X['ID'].to_numpy()
+
+dataset_train_transform = tio.Compose([tio.Resample((1, 1, 1)),
+                                                    tio.ToCanonical(),
+                                                    tio.Mask(masking_method='mask', outside_value=0),
+                                                    tio.CropOrPad(target_shape=(96, 96, 96), mask_name='mask'),
+                                                    tio.ZNormalization(masking_method='mask')])
+
+encoder = Encoder(ResNetEncoder,
+                    module__input_image_size=[96, 96, 96],
+                    module__spatial_dims=3,
+                    module__in_channels=5,
+                    module__out_channels=5,
+                    module__dropout_prob=0.2,
+                    module__block='BasicBlock',
+                    module__shortcut_type='B',
+                    module__blocks_down=[1,1,1,1],
+                    module__pretrained_param_path='outputs/pretrained_models/resnet_10_23dataset.pth',
+                    batch_size=3,
+                    # output_format='pandas',
+                    criterion=BetaVAELoss,
+                    max_epochs=200,
+                    callbacks=[EarlyStopping(load_best=True),
+                               GradientNormClipping(1),
+                               ],
+                    optimizer=torch.optim.AdamW,
+                    lr=0.001,
+                    iterator_train=TransformingDataLoader,
+                    iterator_train__augment_transforms=tio.Compose([tio.RandomGamma(log_gamma=0.1, label_keys=('mask',)),
+                                                                    tio.RandomAffine(p=0.5, label_keys=('mask',),
+                                                                                     scales=0.1, degrees=0,
+                                                                                     translation=0, isotropic=True),
+                                                                    tio.RandomFlip(flip_probability=0.5,
+                                                                                   label_keys=('mask',), axes=(0, 1, 2))
+                                                                    ]),
+                    iterator_train__num_workers=15,
+                    iterator_train__shuffle=True,
+                    iterator_valid__num_workers=4,
+                    dataset=SkorchSubjectsDataset,
+                    dataset__transform=dataset_train_transform,
+                    dataset__data_dir='./data/meningioma_data',
+                    dataset__image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
+                    dataset__mask_stem='mask',
+                    criterion__kld_weight=0.1,
+                    device='cuda'
+                    )
+
+
+# restnet10 = med3d_resnet10(input_image_size=[96,96,96], shortcut_type='B', in_channels=5)
+
+encoder.fit(id_list)
+
+with torch.no_grad():
+    output, in_x, _, _ = encoder.forward(id_list[:10], training=False, device='cuda')
+
+
+plot_slices(output.detach().cpu(), 48, 5, in_x.detach().cpu(), "med3d resnet10", f'outputs/encoder_generated_images/med3d_resnet10/{datetime.now().strftime("%Y%m%d-%H%M%S")}')

@@ -22,17 +22,17 @@ iterator_train__augment_transforms:
     transforms:
         - _target_: torchio.RandomGamma
           log_gamma: 0.1
-          label_keys: mask
+          label_keys: [mask]
         - _target_: torchio.RandomAffine
           p: 0.5
-          label_keys: mask
+          label_keys: [mask]
           scales: 0.1
           degrees: 0
           translation: 0
           isotropic: True
         - _target_: torchio.RandomFlip
           flip_probability: 0.5
-          label_keys: mask
+          label_keys: [mask]
           axes: [0,1,2]
 
 dataset: src.dataset.skorch_subject_ds.SkorchSubjectsDataset
