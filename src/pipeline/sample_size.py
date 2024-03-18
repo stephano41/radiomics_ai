@@ -33,8 +33,7 @@ def get_sample_size(config):
     output_dir = hydra.utils.HydraConfig.get().run.dir
     experiment_name = f"get_sample_{datetime.now().strftime('%Y%m%d%H%M%S')}"
     confidence_intervals, tpr_fprs = [], []
-    # sample_sizes = config.get('sample_sizes', _get_sample_sizes(dataset_size, 25))
-    sample_sizes = [90,80,70,60,50,40,30]
+    sample_sizes = config.get('sample_sizes', _get_sample_sizes(dataset_size, 25))
     for sample_size in sample_sizes:
         logger.info(f'evaluating at sample size {sample_size}')
         # _, sample_x = train_test_split(feature_dataset.df, test_size=sample_size,

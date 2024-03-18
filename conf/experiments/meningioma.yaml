@@ -10,7 +10,7 @@ feature_dataset:
     target_column: Grade
     label_csv_path: ./data/meningioma_meta.csv
     extraction_params: ./conf/radiomic_params/meningioma_mr.yaml
-    feature_df_merger: {_target_: src.pipeline.df_mergers.meningioma_df_merger}
+    feature_df_merger: {_target_: src.utils.df_mergers.meningioma_df_merger}
     label_csv_encoding: Null
     # existing_feature_df: ./outputs/meningioma+autoencoder/2023-12-10-07-29-50/extracted_features.csv
 bootstrap:

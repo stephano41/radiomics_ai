@@ -12,7 +12,7 @@ feature_dataset:
   target_column: Grade
   extraction_params: ./conf/radiomic_params/mr_default.yaml
   label_csv_encoding: cp1252
-  feature_df_merger: {_target_: src.pipeline.wiki_sarcoma_df_merger}
+  feature_df_merger: {_target_: src.utils.df_mergers.wiki_sarcoma_df_merger}
   existing_feature_df:
 
 optimizer:
