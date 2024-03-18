@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 import os
-
+from collections import defaultdict 
 from shap import Cohorts, Explanation
 from shap.utils import format_value, ordinal_str
 from shap.utils._exceptions import DimensionError
@@ -406,20 +406,22 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
         {shap_values.feature_names[i]: mean_shap_values[i] for i in range(len(shap_values.feature_names))})
 
     result_feature_values = {}
+    result_feature_count = {}
     for substring in feature_substrings:
         features = pd_shap_values.filter(regex=substring)
         result_feature_values[substring] = features.mean() if not features.empty else 0
+        result_feature_count[substring] = len(features)
 
     sorted_feature_values = sorted(result_feature_values.items(), key=lambda x: x[1], reverse=False)
 
-    categories = [x[0] for x in sorted_feature_values]
+    sorted_categories = [x[0] for x in sorted_feature_values]
     values = [x[1] for x in sorted_feature_values]
 
     plt.close('all')
-    plt.barh(categories, values)
+    plt.barh(sorted_categories, values)
 
-    for index, value in enumerate(values):
-        plt.text(value, index, format_value(value, '%+.2e'))
+    for index, category in enumerate(sorted_categories):
+        plt.text(sorted_feature_values[category], index, f"{format_value(sorted_feature_values[category], '%+.2e')} (n={result_feature_count[category]})")
 
     plt.xlabel('Mean SHAP Value')
 
