@@ -177,6 +177,15 @@ class ResNetEncoder(SegResNetVAE2):
 
         if pretrained_param_path is not None:
             self.load_params(pretrained_param_path)
+            # freeze the first half of params
+            # freezing layers didn't help, actually made it worse
+            # self.freeze_params(r'\.layer\d\.')
+
+    def freeze_params(self, regex_pattern):
+        for name, param in self.named_parameters():
+            if re.search(regex_pattern, name):
+                param.requires_grad = False
+                
 
     def load_params(self, param_path):
         pretrained_weights = torch.load(param_path)['state_dict']
