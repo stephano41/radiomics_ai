@@ -1,0 +1,5 @@
+# .dockerignore
+outputs/*
+data/*
+tests/*
+.git/*
