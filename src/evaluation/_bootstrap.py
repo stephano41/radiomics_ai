@@ -155,7 +155,7 @@ def log_ci2mlflow(ci_dict: Dict, tpr_fpr: dict = None, run_id=None):
         if tpr_fpr is not None:
             roc_fig, optimal_thresholds = plot_roc_curve_with_ci(tpr_fpr)
             mlflow.log_figure(roc_fig, 'roc_curve.png', save_kwargs={'dpi':300})
-            mlflow.log_metrics(optimal_thresholds, "optimal_thresholds.json")
+            mlflow.log_metrics(optimal_thresholds)
         # log to metrics to display in mlflow
         mlflow.log_metrics(metrics_dict)
 

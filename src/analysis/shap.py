@@ -44,10 +44,7 @@ def get_shap_values(run: str|pd.Series, existing_feature_df=None, existing_split
                                                        splits=dataset_splits)
 
     # first preprocess the data, check if fit_resample is the last thing
-    if hasattr(preprocessor.pipeline.steps[-1][1], 'fit_resample'):
-        preprocessed_X, y = preprocessor.pipeline.fit_resample(feature_dataset.X, feature_dataset.y)
-    else:
-        preprocessed_X, y = preprocessor.pipeline.fit_transform(feature_dataset.X, feature_dataset.y)
+    preprocessed_X, y = preprocessor._fit_transform(feature_dataset.X, feature_dataset.y)
 
     model.fit(preprocessed_X, y)
 
@@ -421,7 +418,7 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
     plt.barh(sorted_categories, values)
 
     for index, category in enumerate(sorted_categories):
-        plt.text(sorted_feature_values[category], index, f"{format_value(sorted_feature_values[category], '%+.2e')} (n={result_feature_count[category]})")
+        plt.text(result_feature_values[category], index, f"{format_value(result_feature_values[category], '%+.2e')} (n={result_feature_count[category]})")
 
     plt.xlabel('Mean SHAP Value')
 
