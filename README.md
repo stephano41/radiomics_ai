@@ -2,12 +2,14 @@
 sarcoma MRI images analysis\
 Also contains data for wiki sarcoma, meningioma
 
-## Docker Compose:
+## Running experiments:
+### Build the container
 Build the container: `docker compose build`\
 Launch mlflow server to view runs: `docker compose up app`\
 Main pipeliine is run by using the `main.py` script and specifying an experiment config\
 You can also run only the bootstrap portion of the pipeline to evaluate a model by specifying `pipelines=evaluate_run`
-### Running experiments
+
+### Experiments supported
 **Wikisarcoma**
  - radiomics: `docker compose run app python main.py experiments=wiki_sarcoma`
 
@@ -42,19 +44,49 @@ To launch mlflow:\
 If running as dockerfile:\
 `sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest mlflow ui --host=0.0.0.0 --port=8000 --backend-store-uri=./outputs/models`
 
+### Test runs
+
+Sometimes it's necessary to see if the new run will run without any breaks in the code.
+ With any experiment with autoencoder: `docker compose run app python main.py experiments={ANY_EXPERIMENT} "autoencoder=dummy_vae" "bootstrap.iters=5" "optimizer.n_trials=5 name=test_run"`
+
 ### Running as dockerfile:
 To build the image:\
 `sudo docker build . -t steven_container`\
 To use the image:\
 `sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest python main.py`\
-Replace python main.py with whatever commands\
+Replace python main.py with whatever commands
 
-**Test runs**
- - with any experiment with autoencoder: `docker compose run app python main.py experiments={ANY_EXPERIMENT} "autoencoder=dummy_vae" "bootstrap.iters=5" "optimizer.n_trials=5 name=test_run"`
-
-**hydra terminal run tips**
+### Hydra terminal run tips
  - For config parameters that don't exist, you'll need to add a plus, for example:`+variable_name=VALUE` translates to config.variable_name: VALUE
  - To pass a list of numbers in the terminal, don't use quotation marks around the list, for example: `sample_size="[10,20,30]"` translates to a list of strings whereas `sample_size=[10,20,30]` translates to a list of numbers
+
+ ## Config parameters
+ Available classifiers:
+- Random Forest
+- SVM
+- XGBoost
+- Logistic Regression
+- KNN
+- MLP
+- DecisionTreeClassifier
+
+Available oversampling methods:
+- SMOTE
+- ADASYN
+- BorderlineSMOTE
+
+Available feature selection methods:
+- anova
+- lasso
+- linear_svc
+- tree
+- sf
+- rfe
+- mrmr
+- pca
+
+Oversampling methods and feature selection methods can support passing arguments. For example: `{_method_: sf, direction: backward, n_jobs: 5, tol: 0.05}` the `_method_` keyword must be used to indicate the method used.
+## Development setup ##
 
 ### Pycharm interpreter setup
 Setup interpreter with pycharm using the docker compose interpreter setting, don't adjust any other run time settings 
