@@ -59,6 +59,7 @@ Replace python main.py with whatever commands
 ### Hydra terminal run tips
  - For config parameters that don't exist, you'll need to add a plus, for example:`+variable_name=VALUE` translates to config.variable_name: VALUE
  - To pass a list of numbers in the terminal, don't use quotation marks around the list, for example: `sample_size="[10,20,30]"` translates to a list of strings whereas `sample_size=[10,20,30]` translates to a list of numbers
+ - Adding a notes argument `"+notes='helloworld'"` allows you to log notes descriptive of the experiment you are running (remember double quotes the whole thing and single quotes the argument)
 
  ## Config parameters
  Available classifiers:

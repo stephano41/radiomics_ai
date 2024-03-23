@@ -11,10 +11,8 @@ from autorad.models import MLClassifier
 from autorad.training import Trainer as OrigTrainer, train_utils
 from autorad.utils import mlflow_utils
 from optuna.trial import Trial
-
 from src.metrics import roc_auc, pr_auc
 from src.preprocessing import Preprocessor
-
 log = logging.getLogger(__name__)
 
 
@@ -156,3 +154,27 @@ class Trainer(OrigTrainer):
             )
 
         mlflow.sklearn.log_model(preprocessor, "preprocessor")
+
+# def get_model_by_name(name, models):
+#     for model in models:
+#         if model.name == name:
+#             return MLClassifier(type(model.model)(**model.model.get_params()), name, model.params)
+
+# import tempfile
+# from optuna.study import Study
+# import optuna
+# from pathlib import Path
+# import matplotlib.pyplot as plt
+
+# def log_optuna(study: Study):
+#     with tempfile.TemporaryDirectory() as tmp_dir:
+#         save_dir = Path(tmp_dir) / "hyperparameter_study"
+#         save_dir.mkdir(exist_ok=True)
+#         study.trials_dataframe().to_csv(save_dir / "study_df.csv")
+#         mlflow.log_artifacts(str(save_dir), "hyperparameter_study")
+    
+#     optimisation_history_plot = optuna.visualization.plot_optimization_history(study)
+#     mlflow.log_figure(optimisation_history_plot,'hyperparameter_study/optimisation_history.html')
+
+#     parallel_coordinate_plot = optuna.visualization.plot_parallel_coordinate(study, params=['oversampling_method', 'feature_selection_method','model'])
+#     mlflow.log_figure(parallel_coordinate_plot,'hyperparameter_study/parallel_coordinate.html')

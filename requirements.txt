@@ -1,4 +1,4 @@
-autorad @ git+https://github.com/stephano41/AutoRadiomics.git@ce388f36a121a834c708b25e9bc9ed53c10d7298
+autorad @ git+https://github.com/stephano41/AutoRadiomics.git@c64af9521968f582f7d73bb704e2e2b580983f2c
 dcmrtstruct2nii
 pytest
 hydra-core
@@ -15,5 +15,5 @@ pingouin
 torch
 torchvision
 torchaudio
-imbalanced-learn==0.11.0
-scikit-learn==1.3.2
+# imbalanced-learn==0.11.0
+# scikit-learn==1.3.

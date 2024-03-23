@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from collections import OrderedDict
 import logging
 import re
+from ..utils import expand_weights
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +199,7 @@ class ResNetEncoder(SegResNetVAE2):
         for k,v in self.state_dict().items():
             stripped_key = re.search(r'\.(.*)',k).group()
             if stripped_key in processed_pretrained_weights.keys():
-                loaded_weights[k] = _expand_weights(processed_pretrained_weights[stripped_key], v)
+                loaded_weights[k] = expand_weights(processed_pretrained_weights[stripped_key], v)
                 keys_used += 1
                 logger.debug(f"{k} was loaded as {loaded_weights[k].shape} from {processed_pretrained_weights[stripped_key].shape}")
             else:
@@ -248,17 +249,7 @@ def _preprocess_pretrain_weights(pretrained_weights):
     return processed_pretrained_weights
 
 
-def _expand_weights(original, new):
-    if len(original.shape)<=1 or len(new.shape)<=1:
-        return original
-    original_channels = original.shape[1]
-    target_channels = new.shape[1]
 
-    if target_channels%original_channels==0 and original_channels<target_channels:
-        repeat_shape = [1] * len(new.shape)
-        repeat_shape[1] = int(target_channels/original_channels)
-        return original.repeat(*repeat_shape)
-    return original
 
 
 def med3d_resnet10(**kwargs):
