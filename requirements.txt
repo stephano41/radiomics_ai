@@ -1,5 +1,6 @@
 autorad @ git+https://github.com/stephano41/AutoRadiomics.git@c64af9521968f582f7d73bb704e2e2b580983f2c
 dcmrtstruct2nii
+dicom2nifti
 pytest
 hydra-core
 jupyter
