@@ -7,11 +7,10 @@ from typing import List, Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import Tensor
 
 from .base_vae import BaseVAE
-from .initialisations import he_init
+from src.models.initialisations import he_init
 
 
 class ResnetVAE(BaseVAE):

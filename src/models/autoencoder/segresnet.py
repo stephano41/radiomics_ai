@@ -1,11 +1,16 @@
 import torch
 import torch.nn.functional as F
 from monai.networks.nets import SegResNetVAE
-
+from torch import nn
 from .base_vae import BaseVAE
 
 
 class SegResNetVAE2(SegResNetVAE, BaseVAE):
+    def __init__(self, *args, vae_nz: int = 256, output_class=2, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.heads = nn.Sequential(nn.ReLU(inplace=True),
+                                   nn.Linear(vae_nz, output_class, bias=True))
+
     def encode(self, x):
         vae_input, _ = super().encode(x)
 
@@ -33,12 +38,14 @@ class SegResNetVAE2(SegResNetVAE, BaseVAE):
 
         x_vae = self.reparameterize(mu, eps)
 
+        head_out = self.heads(x_vae)
+
         x_vae = self.decode(x_vae)
 
         # vae_mse_loss = F.mse_loss(net_input, x_vae)
         # vae_loss = vae_reg_loss + vae_mse_loss
         # return vae_loss
-        return x_vae, net_input, mu, eps
+        return x_vae, net_input, mu, eps, head_out
     
     def decode(self, x_vae):
         x_vae = self.vae_fc3(x_vae)

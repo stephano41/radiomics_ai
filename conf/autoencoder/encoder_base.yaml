@@ -12,7 +12,7 @@ max_epochs: 100
 verbose: 1
 output_format: pandas
 optimizer: torch.optim.AdamW
-criterion: src.models.autoencoder.beta_vae.BetaVAELoss
+criterion: src.models.autoencoder.loss_funcs.BetaVAELoss
 criterion__kld_weight: 0.1
 lr: 0.001
 iterator_train: src.dataset.transforming_dataloader.TransformingDataLoader

@@ -14,10 +14,6 @@ from ..utils import expand_weights
 
 logger = logging.getLogger(__name__)
 
-__all__ = [
-    'ResNet', 'resnet10', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
-    'resnet152', 'resnet200'
-]
 
 
 def conv3x3x3(in_planes, out_planes, stride=1, dilation=1):
@@ -168,7 +164,7 @@ class ResNetEncoder(SegResNetVAE2):
             ('layer3_reverse', layer3_reverse), 
             ('layer2_reverse', layer2_reverse),
             ('layer1_reverse', layer1_reverse)]))
-        
+
         for m in self.modules():
             if isinstance(m, nn.Conv3d):
                 m.weight = nn.init.kaiming_normal_(m.weight, mode='fan_out')
@@ -186,7 +182,6 @@ class ResNetEncoder(SegResNetVAE2):
         for name, param in self.named_parameters():
             if re.search(regex_pattern, name):
                 param.requires_grad = False
-                
 
     def load_params(self, param_path):
         pretrained_weights = torch.load(param_path)['state_dict']
