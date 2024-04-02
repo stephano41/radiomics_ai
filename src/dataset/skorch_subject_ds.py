@@ -5,7 +5,7 @@ import torch
 from torchio import SubjectsDataset
 from skorch.dataset import Dataset
 import torchio as tio
-
+import numpy as np
 from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 
 #
@@ -40,12 +40,20 @@ class SkorchSubjectsDataset(SubjectsDataset):
                                                                       image_stems=image_stems,
                                                                       mask_stem=mask_stem,
                                                                       relative=False)
-        subject_list = self.get_subjects_list(X)
+        subject_list= self.get_subjects_list(X)
+        
+        if y is None:
+            y=[torch.Tensor([0])]*len(X)
+        else:
+            identity_matrix = np.eye(len(np.unique(y)))
+            y = identity_matrix[y]
+        # self.identity_matrix = np.eye(len(max(np.unique(y), 2)))
+        self.id_map = dict(zip(X, y))
         super().__init__(subject_list, transform, load_getitem=load_getitem)
 
     def __getitem__(self, item):
-        subject = super().__getitem__(item).get_images()
-        return torch.concatenate([i.data for i in subject]), 0
+        subject = super().__getitem__(item)
+        return torch.concatenate([i.data for i in subject.get_images()]), self.id_map[subject.ID]
 
     def get_subjects_list(self, X):
         subjects = []
