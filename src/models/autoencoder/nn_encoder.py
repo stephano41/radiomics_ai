@@ -7,14 +7,14 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.base import TransformerMixin
-from skorch import NeuralNet
+from skorch import NeuralNet, NeuralNetClassifier
 from skorch.callbacks import PassthroughScoring, PrintLog, EpochTimer
 from skorch.utils import to_device, to_tensor, to_numpy
 
 from src.models.autoencoder.base_vae import BaseVAE
 
 
-class Encoder(NeuralNet, TransformerMixin):
+class Encoder(NeuralNetClassifier, TransformerMixin):
     def __init__(self, module: BaseVAE, output_format='numpy', **kwargs):
         self.output_format = output_format
 
@@ -76,12 +76,14 @@ class Encoder(NeuralNet, TransformerMixin):
         y_true = to_tensor(y_true, device=self.device)
         loss = self.criterion_(y_pred, y_true)
 
+        # allow for returning multiple losses
         if isinstance(loss, dict):
             for name, value in loss.items():
                 self.history.record_batch(name, to_numpy(value))
             return loss['loss']
 
         return loss
+    
 
     @property
     def _default_callbacks(self):

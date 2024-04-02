@@ -6,7 +6,7 @@ import torch
 import logging
 from collections import OrderedDict
 from ..utils import expand_weights
-
+from torch.optim import AdamW
 
 logger = logging.getLogger(__name__)
 
@@ -70,3 +70,4 @@ def load_fmcib_model(eval_mode=True, save_path='outputs', **kwargs):
         model.eval()
 
     return model
+
