@@ -50,7 +50,7 @@ def get_dicomdir_meta(dicomdir_path: str, dicom_meta_params: Dict[str, str] = No
 
 def dicom_meta2nii(study_meta: pd.DataFrame, output_folder: str,
                    series_description_filter: Union[None, List[str]] = None,
-                   reorient: bool = False, codependent: bool = False, codependent_tolerance: float = 0.1)-> pd.DataFrame:
+                   reorient: bool = False, codependent: bool = False, codependent_tolerance: float = 0.1, patient_id='')-> pd.DataFrame:
     """
     Converts DICOM metadata to NIfTI format.
 
@@ -100,9 +100,10 @@ def dicom_meta2nii(study_meta: pd.DataFrame, output_folder: str,
                 patient_image_position=None
 
         series_path = match_row['series_path']
+        series_name = re.sub(r'[^\w\s]', '', filter)
         dicom2nifti.convert_dicom.dicom_series_to_nifti(original_dicom_directory=series_path,
                                                         output_file=os.path.join(output_folder,
-                                                                                 re.sub(r'[^\w\s]', '', filter)),
+                                                                                 f"{series_name}_{patient_id}"),
                                                         reorient_nifti=reorient)
 
         filtered_df.append(match_row)
@@ -184,12 +185,11 @@ def dicomdir2nii(dicomdir_ds_folder: str, output_folder: str, dicom_meta_params:
     dicom_metas = []
     for dicomdir_file in tqdm(list(Path(dicomdir_ds_folder).rglob("DICOMDIR"))):
         dicom_meta = get_dicomdir_meta(str(dicomdir_file), dicom_meta_params=dicom_meta_params)
-        nifti_output_folder = os.path.join(output_folder, dicomdir_file.parent.name)
-        os.makedirs(nifti_output_folder, exist_ok=True)
         filtered_meta = dicom_meta2nii(dicom_meta,
-                                       output_folder=nifti_output_folder,
+                                       output_folder=output_folder,
                                        series_description_filter=series_description_filter,
                                        codependent=codependent,
-                                       codependent_tolerance=codependent_tolerance)
+                                       codependent_tolerance=codependent_tolerance,
+                                       patient_id=dicomdir_file.parent.name)
         dicom_metas.append(filtered_meta)
     return pd.concat(dicom_metas, axis=0).reset_index(drop=True)
