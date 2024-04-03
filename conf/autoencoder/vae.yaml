@@ -6,7 +6,7 @@ defaults:
 
 # steps_dict:
 #     autoencoder:
-module: src.models.autoencoder.VanillaVAE
+module: src.models.VanillaVAE
 module__in_channels: 5
 module__latent_dim: 128
 module__hidden_dims: [32, 64, 128]

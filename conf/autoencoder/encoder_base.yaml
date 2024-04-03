@@ -7,12 +7,12 @@
 #         image_stems: ${feature_dataset.image_stems}
 #         mask_stem: ${feature_dataset.mask_stem}
 #     autoencoder:
-_target_: src.models.autoencoder.nn_encoder.Encoder
+_target_: src.models.NeuralNetEncoder
 max_epochs: 100
 verbose: 1
 output_format: pandas
 optimizer: torch.optim.AdamW
-criterion: src.models.autoencoder.loss_funcs.BetaVAELoss
+criterion: src.models.BetaVAELoss
 criterion__kld_weight: 0.1
 lr: 0.001
 iterator_train: src.dataset.transforming_dataloader.TransformingDataLoader

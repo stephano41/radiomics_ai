@@ -7,7 +7,7 @@ from src.evaluation import Bootstrap
 from pytest import mark
 from sklearn.pipeline import make_pipeline
 from sklearn.dummy import DummyClassifier
-from src.models.autoencoder import Encoder
+from src.models.autoencoder import NeuralNetEncoder
 
 
 @mark.parametrize('num_classes', [2,3])
@@ -26,16 +26,16 @@ def test_bootstrap_multiprocessing(tmp_path):
     X = np.random.random([100, 500])
     Y = np.random.randint(0, 2, 100)
 
-    encoder = Encoder(module='src.models.autoencoder.DummyVAE',
-                      module__in_channels=1,
-                      module__latent_dim=64,
-                      module__hidden_dims=[8, 16, 32],
-                      module__finish_size=2,
-                      criterion='src.models.autoencoder.VAELoss',
-                      max_epochs=2,
-                      dataset='src.dataset.dummy_dataset.DummyDataset',
-                      device='cuda'
-                      )
+    encoder = NeuralNetEncoder(module='src.models.autoencoder.DummyVAE',
+                               module__in_channels=1,
+                               module__latent_dim=64,
+                               module__hidden_dims=[8, 16, 32],
+                               module__finish_size=2,
+                               criterion='src.models.autoencoder.VAELoss',
+                               max_epochs=2,
+                               dataset='src.dataset.dummy_dataset.DummyDataset',
+                               device='cuda'
+                               )
     estimator = KNeighborsClassifier(3)
     model = make_pipeline(encoder, estimator)
     evaluator = Bootstrap(X, Y, iters=12, num_processes=4, log_dir=tmp_path, method='.632')

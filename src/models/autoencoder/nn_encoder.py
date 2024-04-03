@@ -14,7 +14,7 @@ from skorch.utils import to_device, to_tensor, to_numpy
 from src.models.autoencoder.base_vae import BaseVAE
 
 
-class Encoder(NeuralNetClassifier, TransformerMixin):
+class NeuralNetEncoder(NeuralNetClassifier, TransformerMixin):
     def __init__(self, module: BaseVAE, output_format='numpy', **kwargs):
         self.output_format = output_format
 
@@ -43,6 +43,17 @@ class Encoder(NeuralNetClassifier, TransformerMixin):
 
     def get_feature_names_out(self):
         pass
+
+    def predict_proba(self, X):
+        nonlin = self._get_predict_nonlinearity()
+        y_probas = []
+        for yp in self.forward_iter(X, training=False):
+            if isinstance(yp, tuple):
+                yp = yp[4] if len(yp)==5 else yp[0]
+            yp = nonlin(yp)
+            y_probas.append(to_numpy(yp))
+        y_proba = np.concatenate(y_probas, 0)
+        return y_proba
 
     def get_loss(self, y_pred, y_true, X=None, training=False):
         """Return the loss for this batch.

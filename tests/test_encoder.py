@@ -5,21 +5,21 @@ from sklearn.base import BaseEstimator
 from sklearn.pipeline import Pipeline
 from src.models.autoencoder.med3d_resnet import med3d_resnet10
 import torch
-from src.models.autoencoder import Encoder
+from src.models.autoencoder import NeuralNetEncoder
 from pytest import mark
 
 def test_nn_encoder():
     # generate random images batch 10, single channel, 16x16x16
     images = torch.randn([10,1,16,16,16]).type(torch.float32)
 
-    encoder = Encoder(module='src.models.autoencoder.VanillaVAE',
-                      module__in_channels=1,
-                      module__latent_dim=64,
-                      module__hidden_dims=[8,16,32],
-                      module__finish_size=2,
-                      criterion='src.models.autoencoder.VAELoss',
-                      max_epochs=2
-                      )
+    encoder = NeuralNetEncoder(module='src.models.autoencoder.VanillaVAE',
+                               module__in_channels=1,
+                               module__latent_dim=64,
+                               module__hidden_dims=[8,16,32],
+                               module__finish_size=2,
+                               criterion='src.models.autoencoder.VAELoss',
+                               max_epochs=2
+                               )
 
     encoder.fit(images)
 

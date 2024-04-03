@@ -86,6 +86,9 @@ def roc_auc(y_true, y_pred, average='macro', multi_class='raise', labels=None):
     if len(y_pred.shape) >= 2: #if given in n_sample x n_class format
         if y_pred.shape[1] <= 2: #if it's binary case
             y_pred = y_pred[:, 1]
+    if isinstance(y_true, tuple) and len(y_true)==5:
+        # account for encoder models that pass multiple forward
+        y_true=y_true[4]
 
     try:
         auc_score = roc_auc_score(y_true, y_pred, average=average, multi_class=multi_class, labels=labels)

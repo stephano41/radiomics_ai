@@ -113,7 +113,7 @@ class Bottleneck(nn.Module):
         return out
 
 
-class ResNetEncoder(SegResNetVAE2):
+class Med3DEncoder(SegResNetVAE2):
 
     def __init__(self,
                  block,
@@ -250,47 +250,47 @@ def _preprocess_pretrain_weights(pretrained_weights):
 def med3d_resnet10(**kwargs):
     """Constructs a ResNet-18 model.
     """
-    model = ResNetEncoder(BasicBlock, [1, 1, 1, 1], **kwargs)
+    model = Med3DEncoder(BasicBlock, [1, 1, 1, 1], **kwargs)
     return model
 
 
 def med3d_resnet18(**kwargs):
     """Constructs a ResNet-18 model.
     """
-    model = ResNetEncoder(BasicBlock, [2, 2, 2, 2], **kwargs)
+    model = Med3DEncoder(BasicBlock, [2, 2, 2, 2], **kwargs)
     return model
 
 
 def med3d_resnet34(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = ResNetEncoder(BasicBlock, [3, 4, 6, 3], **kwargs)
+    model = Med3DEncoder(BasicBlock, [3, 4, 6, 3], **kwargs)
     return model
 
 
 def med3d_resnet50(**kwargs):
     """Constructs a ResNet-50 model.
     """
-    model = ResNetEncoder(Bottleneck, [3, 4, 6, 3], **kwargs)
+    model = Med3DEncoder(Bottleneck, [3, 4, 6, 3], **kwargs)
     return model
 
 
 def med3d_resnet101(**kwargs):
     """Constructs a ResNet-101 model.
     """
-    model = ResNetEncoder(Bottleneck, [3, 4, 23, 3], **kwargs)
+    model = Med3DEncoder(Bottleneck, [3, 4, 23, 3], **kwargs)
     return model
 
 
 def med3d_resnet152(**kwargs):
     """Constructs a ResNet-101 model.
     """
-    model = ResNetEncoder(Bottleneck, [3, 8, 36, 3], **kwargs)
+    model = Med3DEncoder(Bottleneck, [3, 8, 36, 3], **kwargs)
     return model
 
 
 def med3d_resnet200(**kwargs):
     """Constructs a ResNet-101 model.
     """
-    model = ResNetEncoder(Bottleneck, [3, 24, 36, 3], **kwargs)
+    model = Med3DEncoder(Bottleneck, [3, 24, 36, 3], **kwargs)
     return model

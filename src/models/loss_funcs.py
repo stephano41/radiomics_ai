@@ -17,7 +17,7 @@ class BetaVAELoss(nn.Module):
     num_iter = 0
 
     def __init__(self, beta=4, gamma=1000, kld_weight=0.00025, max_capacity=25, Capacity_max_iter: int = 1e5,
-                 loss_type: str = 'B', head_loss=nn.Loss):
+                 loss_type: str = 'B', head_loss=nn.BCEWithLogitsLoss):
         super().__init__()
         self.beta = beta
         self.gamma = gamma
@@ -25,6 +25,7 @@ class BetaVAELoss(nn.Module):
         self.loss_type = loss_type
         self.C_max = torch.Tensor([max_capacity])
         self.C_stop_iter = Capacity_max_iter
+        self.head_loss=head_loss()
 
     def forward(self, *args, **kwargs):
         self.num_iter += 1
@@ -49,8 +50,9 @@ class BetaVAELoss(nn.Module):
         if len(args[0])==5:
             head_out = args[0][4]
             head_true = args[1]
-
-
+            classifier_loss = self.head_loss(head_out, head_true)
+            loss = classifier_loss+loss
+            return {'loss': loss, 'recons_loss': recons_loss, 'kld_loss': kld_loss, 'classifier_loss':classifier_loss}
 
         return {'loss': loss, 'recons_loss': recons_loss, 'kld_loss': kld_loss}
 

@@ -1,8 +1,8 @@
 # @package preprocessing.autoencoder
 
 
-_target_: src.models.autoencoder.nn_encoder.Encoder
-module: src.models.autoencoder.DummyVAE
+_target_: src.models.NeuralNetEncoder
+module: src.models.DummyVAE
 module__in_channels: 1
 module__latent_dim: 64
 module__hidden_dims: [8, 16, 32]
@@ -12,7 +12,7 @@ batch_size: 128
 verbose: 1
 lr: 0.001
 output_format: pandas
-criterion: src.models.autoencoder.beta_vae.BetaVAELoss
+criterion: src.models.BetaVAELoss
 criterion__kld_weight: 0.1
 dataset: src.dataset.dummy_dataset.DummyDataset
 

@@ -1,13 +1,12 @@
 import torch
 from src.dataset.visualisation import plot_slices
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset
-from src.models.autoencoder.fmcib_model import FMCIBModel
 import pandas as pd
 import torchio as tio
-from skorch.callbacks import EarlyStopping, GradientNormClipping, ParamMapper
+from skorch.callbacks import EarlyStopping, GradientNormClipping, ParamMapper, PassthroughScoring
 from src.dataset import TransformingDataLoader, SkorchSubjectsDataset
 from sklearn.model_selection import ParameterGrid
-from src.models.autoencoder import BetaVAELoss, Encoder
+from src.models import BetaVAELoss, NeuralNetEncoder, FMCIBModel, Med3DEncoder
 from sklearn.model_selection import GridSearchCV, cross_val_score
 from sklearn.metrics import make_scorer
 from src.metrics import roc_auc
@@ -45,14 +44,20 @@ dataset_train_transform = tio.Compose([tio.Resample((1, 1, 1)),
                                                     tio.RescaleIntensity(masking_method='mask'),
                                                     # tio.ZNormalization(masking_method='mask'),
                                                     ])
-encoder_kwargs = dict(module=FMCIBModel,
-                    module__input_channels=5,
-                    module__weights_path='outputs/pretrained_models/model_weights.torch',
+encoder_kwargs = dict(module=Med3DEncoder,
+                    # module__input_channels=5,
+                    # module__weights_path='outputs/pretrained_models/model_weights.torch',
+                      module__block='BasicBlock',
+                      module__blocks_down=[1,1,1,1],
+                      module__input_image_size=[96,96,96],
+                      module__in_channels=5,
+                      module__pretrained_param_path='outputs/pretrained_models/resnet_10_23dataset.pth',
                     batch_size=3,
                     # output_format='pandas',
                     max_epochs=200,
                     callbacks=[EarlyStopping(load_best=True),
                                GradientNormClipping(1),
+                                ('classifier_loss',PassthroughScoring('classifier_loss'))
                             #    ParamMapper('trunk.*', schedule=freeze_net)
                                ],
                     optimizer='torch.optim.AdamW',
@@ -74,10 +79,10 @@ encoder_kwargs = dict(module=FMCIBModel,
                     dataset__image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
                     dataset__mask_stem='mask',
                     device='cuda',
-                    criterion='torch.nn.BCEWithLogitsLoss',
+                    criterion=BetaVAELoss,
                     optimizer__param_groups=[
-                        ('trunk.*', {'lr': 0.0001}),
-                        ('latent_var_head.*', {'lr': 0.001}),
+                        ('convInit.*', {'lr': 0.000001}),
+                        ('up_layers.*', {'lr': 0.001}),
                         ('heads.*', {'lr': 0.001}),
 
                     ]
@@ -90,40 +95,33 @@ encoder_kwargs = dict(module=FMCIBModel,
 #                                              [('trunk.*', {'lr': 0.0000001}),('latent_var_head.*', {'lr': 0.001}),('heads.*', {'lr': 0.001})],
 #                                              ]}
 
-# encoder = Encoder(**encoder_kwargs)
+encoder = NeuralNetEncoder(**encoder_kwargs)
+roc_auc_scorer = make_scorer(roc_auc)
+scores = cross_val_score(encoder, id_list, feature_dataset.y.to_numpy(), cv=5, scoring=roc_auc_scorer, error_score='raise', verbose=2)
+print(f'cross validation scores: {scores.mean()}')
 
-
-
-# encoder.fit(id_list, feature_dataset.y.to_numpy())
-# roc_auc_scorer = make_scorer(roc_auc)
-# clf = GridSearchCV(encoder, parameter_grid, scoring=roc_auc_scorer,verbose=3,error_score='raise')
-# clf.fit(id_list, feature_dataset.y.to_numpy())
-# print(pd.DataFrame(clf.cv_results_))
-# pd.DataFrame(clf.cv_results_).to_csv('outputs/foundation_model_test.csv')
-# print(f'best params were: {clf.best_params_} which achieved {clf.best_score_}')
-
-def objective(trial):
-    lr_pretrained = trial.suggest_float('lr_pretrained', 1e-6,1e-2,log=True)
-    lr_untrained = trial.suggest_float('lr_untrained', 1e-5,1e-1,log=True)
-    
-    parameters = {'optimizer__param_groups': [('trunk.*', {'lr': lr_pretrained}), ('latent_var_head.*', {'lr': lr_untrained}), ('heads.*', {'lr': lr_untrained})]}
-    encoder_kwargs.update(parameters)
-
-    encoder = Encoder(**encoder_kwargs)
-    # Perform cross-validation with the current parameters
-    roc_auc_scorer = make_scorer(roc_auc)
-    scores = cross_val_score(encoder, id_list, feature_dataset.y.to_numpy(), cv=5, scoring=roc_auc_scorer)
-    
-    # Return the mean of cross-validation scores as the objective value
-    return scores.mean()
-
-study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=20)
-
-print(f"Best score: {study.best_value}")
-print(f"Best params: {study.best_params}")
-
-output_dir = f"outputs/dl_tests/{datetime.now().strftime('%Y%m%d%H%M%S')}"
-os.makedirs(output_dir, exist_ok=True)
-
-study.trials_dataframe().to_csv(os.path.join(output_dir, "study_df.csv"))
+# def objective(trial):
+#     lr_pretrained = trial.suggest_float('lr_pretrained', 1e-6,1e-2,log=True)
+#     lr_untrained = trial.suggest_float('lr_untrained', 1e-5,1e-1,log=True)
+#
+#     parameters = {'optimizer__param_groups': [('trunk.*', {'lr': lr_pretrained}), ('latent_var_head.*', {'lr': lr_untrained}), ('heads.*', {'lr': lr_untrained})]}
+#     encoder_kwargs.update(parameters)
+#
+#     encoder = NeuralNetEncoder(**encoder_kwargs)
+#     # Perform cross-validation with the current parameters
+#     roc_auc_scorer = make_scorer(roc_auc)
+#     scores = cross_val_score(encoder, id_list, feature_dataset.y.to_numpy(), cv=5, scoring=roc_auc_scorer)
+#
+#     # Return the mean of cross-validation scores as the objective value
+#     return scores.mean()
+#
+# study = optuna.create_study(direction='maximize')
+# study.optimize(objective, n_trials=20)
+#
+# print(f"Best score: {study.best_value}")
+# print(f"Best params: {study.best_params}")
+#
+# output_dir = f"outputs/dl_tests/{datetime.now().strftime('%Y%m%d%H%M%S')}"
+# os.makedirs(output_dir, exist_ok=True)
+#
+# study.trials_dataframe().to_csv(os.path.join(output_dir, "study_df.csv"))
