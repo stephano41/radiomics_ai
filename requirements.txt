@@ -1,4 +1,4 @@
-autorad @ git+https://github.com/stephano41/AutoRadiomics.git@c64af9521968f582f7d73bb704e2e2b580983f2c
+autorad @ git+https://github.com/stephano41/AutoRadiomics.git@a4d56b56aa645c93c4c2aea61991f5ee1787fc7f
 dcmrtstruct2nii
 dicom2nifti
 pytest

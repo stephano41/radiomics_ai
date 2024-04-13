@@ -444,9 +444,9 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
 
 
 def plot_dependence_scatter_plot(shap_values, n_features, save_dir=None):
-    top_features_indices = shap_values.abs().max(0).argsort()[-n_features:]
-    for idx in top_features_indices:
-        shap.plots.scatter(shap_values[:, idx])
+    top_features_indices = np.mean(np.abs(shap_values.values), 0).argsort()
+    for idx in range(n_features):
+        shap.plots.scatter(shap_values[:, np.where(top_features_indices==idx)[0][0]])
         if save_dir is not None:
             plt.savefig(f"{save_dir}/dependence_plot_feature_{idx}.png", dpi=300)
             plt.close('all')
