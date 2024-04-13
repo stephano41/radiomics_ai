@@ -103,7 +103,7 @@ def dicom_meta2nii(study_meta: pd.DataFrame, output_folder: str,
         series_name = re.sub(r'[^\w\s]', '', filter)
         dicom2nifti.convert_dicom.dicom_series_to_nifti(original_dicom_directory=series_path,
                                                         output_file=os.path.join(output_folder,
-                                                                                 f"{series_name}_{patient_id}"),
+                                                                                 f"{patient_id}_{series_name}"),
                                                         reorient_nifti=reorient)
 
         filtered_df.append(match_row)
