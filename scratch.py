@@ -14,6 +14,8 @@ import skorch
 import optuna
 from datetime import datetime
 import os
+import logging
+# logging.basicConfig(level=logging.DEBUG)
 
 def freeze_net(net):
     if len(net.history) <=5:
@@ -44,20 +46,20 @@ dataset_train_transform = tio.Compose([tio.Resample((1, 1, 1)),
                                                     tio.RescaleIntensity(masking_method='mask'),
                                                     # tio.ZNormalization(masking_method='mask'),
                                                     ])
-encoder_kwargs = dict(module=Med3DEncoder,
-                    # module__input_channels=5,
-                    # module__weights_path='outputs/pretrained_models/model_weights.torch',
-                      module__block='BasicBlock',
-                      module__blocks_down=[1,1,1,1],
-                      module__input_image_size=[96,96,96],
-                      module__in_channels=5,
-                      module__pretrained_param_path='outputs/pretrained_models/resnet_10_23dataset.pth',
+encoder_kwargs = dict(module=FMCIBModel,
+                    module__input_channels=5,
+                    module__weights_path='outputs/pretrained_models/model_weights.torch',
+                    #   module__block='BasicBlock',
+                    #   module__blocks_down=[3, 4, 6, 3],
+                    #   module__input_image_size=[96,96,96],
+                    #   module__in_channels=1,
+                    #   module__pretrained_param_path='outputs/pretrained_models/resnet_34_23dataset.pth',
                     batch_size=3,
                     # output_format='pandas',
                     max_epochs=200,
                     callbacks=[EarlyStopping(load_best=True),
                                GradientNormClipping(1),
-                                ('classifier_loss',PassthroughScoring('classifier_loss'))
+                                # ('classifier_loss',PassthroughScoring('classifier_loss'))
                             #    ParamMapper('trunk.*', schedule=freeze_net)
                                ],
                     optimizer='torch.optim.AdamW',
@@ -77,14 +79,23 @@ encoder_kwargs = dict(module=Med3DEncoder,
                     dataset__transform=dataset_train_transform,
                     dataset__data_dir='./data/meningioma_data',
                     dataset__image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),
+                    # dataset__image_stems=('t1ce','t1','flair'),
+
                     dataset__mask_stem='mask',
                     device='cuda',
-                    criterion=BetaVAELoss,
-                    optimizer__param_groups=[
-                        ('convInit.*', {'lr': 0.000001}),
-                        ('up_layers.*', {'lr': 0.001}),
-                        ('heads.*', {'lr': 0.001}),
+                    criterion="torch.nn.BCEWithLogitsLoss",
+                    # criterion=BetaVAELoss,
+                    # optimizer__param_groups=[
+                    #     ('convInit.*', {'lr': 0.000001}),
+                    #     ('down_layers.*', {'lr':0.000001}),
+                    #     ('up_layers.*', {'lr': 0.001}),
+                    #     ('heads.*', {'lr': 0.001}),
 
+                    # ]
+                    optimizer__param_groups=[
+                        ['trunk.*', {'lr': 0.000001}],
+                        ['latent_var_head.*', {'lr':0.001}],
+                        ['heads.*', {'lr': 0.001}],
                     ]
                     )
 
@@ -99,6 +110,8 @@ encoder = NeuralNetEncoder(**encoder_kwargs)
 roc_auc_scorer = make_scorer(roc_auc)
 scores = cross_val_score(encoder, id_list, feature_dataset.y.to_numpy(), cv=5, scoring=roc_auc_scorer, error_score='raise', verbose=2)
 print(f'cross validation scores: {scores.mean()}')
+print(f'cross validation scores std: {scores.std()}')
+
 
 # def objective(trial):
 #     lr_pretrained = trial.suggest_float('lr_pretrained', 1e-6,1e-2,log=True)
