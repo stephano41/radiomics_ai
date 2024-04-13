@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 import os
-from collections import defaultdict 
+from collections import defaultdict
 from shap import Cohorts, Explanation
 from shap.utils import format_value, ordinal_str
 from shap.utils._exceptions import DimensionError
@@ -25,7 +25,7 @@ from shap.plots._utils import (
 )
 
 
-def get_shap_values(run: str|pd.Series, existing_feature_df=None, existing_splits=None):
+def get_shap_values(run: str | pd.Series, existing_feature_df=None, existing_splits=None):
     if isinstance(run, str):
         run = pd.Series(dict(mlflow.get_run(run).info))
 
@@ -54,9 +54,8 @@ def get_shap_values(run: str|pd.Series, existing_feature_df=None, existing_split
     return shap_values, dataset_df, dataset_splits
 
 
-
 def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clustering_cutoff=0.5,
-        merge_cohorts=False, show_data="auto", show=True):
+                    merge_cohorts=False, show_data="auto", show=True):
     """Create a bar plot of a set of SHAP values. customised to display shap values with scientific values
 
     If a single sample is passed, then we plot the SHAP values as a bar chart. If an
@@ -133,7 +132,8 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
     else:
         partition_tree = clustering
     if partition_tree is not None:
-        assert partition_tree.shape[1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
+        assert partition_tree.shape[
+                   1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
     op_history = cohort_exps[0].op_history
     values = np.array([cohort_exps[i].values for i in range(len(cohort_exps))])
 
@@ -146,26 +146,25 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
 
     # TODO: Rather than just show the "1st token", "2nd token", etc. it would be better to show the "Instance 0's 1st but", etc
     if issubclass(type(feature_names), str):
-        feature_names = [ordinal_str(i)+" "+feature_names for i in range(len(values[0]))]
+        feature_names = [ordinal_str(i) + " " + feature_names for i in range(len(values[0]))]
 
     # build our auto xlabel based on the transform history of the Explanation object
     xlabel = "SHAP value"
     for op in op_history:
         if op["name"] == "abs":
-            xlabel = "|"+xlabel+"|"
+            xlabel = "|" + xlabel + "|"
         elif op["name"] == "__getitem__":
-            pass # no need for slicing to effect our label, it will be used later to find the sizes of cohorts
+            pass  # no need for slicing to effect our label, it will be used later to find the sizes of cohorts
         else:
-            xlabel = str(op["name"])+"("+xlabel+")"
+            xlabel = str(op["name"]) + "(" + xlabel + ")"
 
     # find how many instances are in each cohort (if they were created from an Explanation object)
     cohort_sizes = []
     for exp in cohort_exps:
         for op in exp.op_history:
-            if op.get("collapsed_instances", False): # see if this if the first op to collapse the instances
+            if op.get("collapsed_instances", False):  # see if this if the first op to collapse the instances
                 cohort_sizes.append(op["prev_shape"][0])
                 break
-
 
     # unwrap any pandas series
     if isinstance(features, pd.Series):
@@ -188,7 +187,8 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
     orig_inds = [[i] for i in range(len(values[0]))]
     orig_values = values.copy()
     while True:
-        feature_order = np.argsort(np.mean([np.argsort(convert_ordering(order, Explanation(values[i]))) for i in range(values.shape[0])], 0))
+        feature_order = np.argsort(
+            np.mean([np.argsort(convert_ordering(order, Explanation(values[i]))) for i in range(values.shape[0])], 0))
         if partition_tree is not None:
 
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
@@ -200,11 +200,12 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
 
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
             # off the feature ordering, so we need to merge some tree nodes and then try again.
-            if max_display < len(feature_order) and dist[feature_order[max_display-1],feature_order[max_display-2]] <= clustering_cutoff:
-                #values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
+            if max_display < len(feature_order) and dist[
+                feature_order[max_display - 1], feature_order[max_display - 2]] <= clustering_cutoff:
+                # values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
                 partition_tree, ind1, ind2 = merge_nodes(np.abs(values).mean(0), partition_tree)
                 for i in range(len(values)):
-                    values[:,ind1] += values[:,ind2]
+                    values[:, ind1] += values[:, ind2]
                     values = np.delete(values, ind2, 1)
                     orig_inds[ind1] += orig_inds[ind2]
                     del orig_inds[ind2]
@@ -217,7 +218,7 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
     feature_inds = feature_order[:max_display]
     y_pos = np.arange(len(feature_inds), 0, -1)
     feature_names_new = []
-    for pos,inds in enumerate(orig_inds):
+    for pos, inds in enumerate(orig_inds):
         if len(inds) == 1:
             feature_names_new.append(feature_names[inds[0]])
         else:
@@ -226,13 +227,14 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
                 feature_names_new.append(full_print)
             else:
                 max_ind = np.argmax(np.abs(orig_values).mean(0)[inds])
-                feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds)-1))
+                feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds) - 1))
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
     if num_features < len(values[0]):
-        num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(values[0]))])
-        values[:,feature_order[num_features-1]] = np.sum([values[:,feature_order[i]] for i in range(num_features-1, len(values[0]))], 0)
+        num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features - 1, len(values[0]))])
+        values[:, feature_order[num_features - 1]] = np.sum(
+            [values[:, feature_order[i]] for i in range(num_features - 1, len(values[0]))], 0)
 
     # build our y-tick labels
     yticklabels = []
@@ -249,7 +251,7 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
     plt.gcf().set_size_inches(8, num_features * row_height * np.sqrt(len(values)) + 1.5)
 
     # if negative values are present then we draw a vertical line to mark 0, otherwise the axis does this for us...
-    negative_values_present = np.sum(values[:,feature_order[:num_features]] < 0) > 0
+    negative_values_present = np.sum(values[:, feature_order[:num_features]] < 0) > 0
     if negative_values_present:
         plt.axvline(0, 0, 1, color="#000000", linestyle="-", linewidth=1, zorder=1)
 
@@ -260,10 +262,11 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
     for i in range(len(values)):
         ypos_offset = - ((i - len(values) / 2) * bar_width + bar_width / 2)
         plt.barh(
-            y_pos + ypos_offset, values[i,feature_inds],
+            y_pos + ypos_offset, values[i, feature_inds],
             bar_width, align='center',
-            color=[colors.blue_rgb if values[i,feature_inds[j]] <= 0 else colors.red_rgb for j in range(len(y_pos))],
-            hatch=patterns[i], edgecolor=(1,1,1,0.8), label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
+            color=[colors.blue_rgb if values[i, feature_inds[j]] <= 0 else colors.red_rgb for j in range(len(y_pos))],
+            hatch=patterns[i], edgecolor=(1, 1, 1, 0.8),
+            label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
         )
 
     # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
@@ -272,31 +275,33 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
     xlen = plt.xlim()[1] - plt.xlim()[0]
     fig = plt.gcf()
     ax = plt.gca()
-    #xticks = ax.get_xticks()
+    # xticks = ax.get_xticks()
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     width = bbox.width
-    bbox_to_xscale = xlen/width
+    bbox_to_xscale = xlen / width
 
     for i in range(len(values)):
         ypos_offset = - ((i - len(values) / 2) * bar_width + bar_width / 2)
         for j in range(len(y_pos)):
             ind = feature_order[j]
-            if values[i,ind] < 0:
+            if values[i, ind] < 0:
                 plt.text(
-                    values[i,ind] - (5/72)*bbox_to_xscale, y_pos[j] + ypos_offset, format_value(values[i,ind], '%+.2e'),
+                    values[i, ind] - (5 / 72) * bbox_to_xscale, y_pos[j] + ypos_offset,
+                    format_value(values[i, ind], '%+.2e'),
                     horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
                     fontsize=12
                 )
             else:
                 plt.text(
-                    values[i,ind] + (5/72)*bbox_to_xscale, y_pos[j] + ypos_offset, format_value(values[i,ind], '%+.2e'),
+                    values[i, ind] + (5 / 72) * bbox_to_xscale, y_pos[j] + ypos_offset,
+                    format_value(values[i, ind], '%+.2e'),
                     horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
                     fontsize=12
                 )
 
     # put horizontal lines for each feature row
     for i in range(num_features):
-        plt.axhline(i+1, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
+        plt.axhline(i + 1, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
 
     if features is not None:
         features = list(features)
@@ -307,7 +312,7 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
                 if round(features[i]) == features[i]:
                     features[i] = int(features[i])
             except Exception:
-                pass # features[i] must not be a number
+                pass  # features[i] must not be a number
 
     plt.gca().xaxis.set_ticks_position('bottom')
     plt.gca().yaxis.set_ticks_position('none')
@@ -317,13 +322,13 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
         plt.gca().spines['left'].set_visible(False)
     plt.gca().tick_params('x', labelsize=11)
 
-    xmin,xmax = plt.gca().get_xlim()
-    ymin,ymax = plt.gca().get_ylim()
+    xmin, xmax = plt.gca().get_xlim()
+    ymin, ymax = plt.gca().get_ylim()
 
     if negative_values_present:
-        plt.gca().set_xlim(xmin - (xmax-xmin)*0.05, xmax + (xmax-xmin)*0.05)
+        plt.gca().set_xlim(xmin - (xmax - xmin) * 0.05, xmax + (xmax - xmin) * 0.05)
     else:
-        plt.gca().set_xlim(xmin, xmax + (xmax-xmin)*0.05)
+        plt.gca().set_xlim(xmin, xmax + (xmax - xmin) * 0.05)
 
     # if features is None:
     #     plt.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
@@ -344,14 +349,15 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
 
         # compute the dendrogram line positions based on our current feature order
         feature_pos = np.argsort(feature_order)
-        ylines,xlines = dendrogram_coords(feature_pos, partition_tree)
+        ylines, xlines = dendrogram_coords(feature_pos, partition_tree)
 
         # plot the distance cut line above which we don't show tree edges
-        xmin,xmax = plt.xlim()
-        xlines_min,xlines_max = np.min(xlines),np.max(xlines)
+        xmin, xmax = plt.xlim()
+        xlines_min, xlines_max = np.min(xlines), np.max(xlines)
         ct_line_pos = (clustering_cutoff / (xlines_max - xlines_min)) * 0.1 * (xmax - xmin) + xmax
         plt.text(
-            ct_line_pos + 0.005 * (xmax - xmin), (ymax - ymin)/2, "Clustering cutoff = " + format_value(clustering_cutoff, '%0.02f'),
+            ct_line_pos + 0.005 * (xmax - xmin), (ymax - ymin) / 2,
+            "Clustering cutoff = " + format_value(clustering_cutoff, '%0.02f'),
             horizontalalignment='left', verticalalignment='center', color="#999999",
             fontsize=12, rotation=-90
         )
@@ -418,7 +424,8 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
     plt.barh(sorted_categories, values)
 
     for index, category in enumerate(sorted_categories):
-        plt.text(result_feature_values[category], index, f"{format_value(result_feature_values[category], '%+.2e')} (n={result_feature_count[category]})")
+        plt.text(result_feature_values[category], index,
+                 f"{format_value(result_feature_values[category], '%+.2e')} (n={result_feature_count[category]})")
 
     plt.xlabel('Mean SHAP Value')
 
@@ -435,5 +442,11 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
     fig.savefig(save_dir, dpi=300)
     return fig
 
-def plot_dependence_scatter_plot():
-    pass
+
+def plot_dependence_scatter_plot(shap_values, n_features, save_dir=None):
+    top_features_indices = shap_values.abs().max(0).argsort()[-n_features:]
+    for idx in top_features_indices:
+        shap.plots.scatter(shap_values[:, idx])
+        if save_dir is not None:
+            plt.savefig(f"{save_dir}/dependence_plot_feature_{idx}.png", dpi=300)
+            plt.close('all')

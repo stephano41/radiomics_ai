@@ -2,7 +2,7 @@ import logging
 import mlflow
 import pandas as pd
 from autorad.inference.infer_utils import get_last_run_from_experiment_name, load_dataset_artifacts
-from src.analysis.shap import get_shap_values, plot_shap_bar, summate_shap_bar
+from src.analysis.shap import get_shap_values, plot_shap_bar, summate_shap_bar, plot_dependence_scatter_plot
 from src.analysis.calibration_curve import plot_calibration_curve
 import os
 
@@ -30,6 +30,11 @@ def run_analysis(config):
     plot_shap_bar(shap_values, max_display=200,
                   save_dir=os.path.join(output_dir, 'shap_bar_plot_overview.png'),
                   size=(25, 48))
+
+    dependence_save_dir=os.path.join(output_dir, 'shap_dependence_scatter_plots')
+    os.makedirs(dependence_save_dir, exist_ok=True)
+    plot_dependence_scatter_plot(shap_values, 10, save_dir=dependence_save_dir)
+
     if config.analysis.get('image_modalities', None) is not None:
         summate_shap_bar(shap_values, config.analysis.image_modalities,
                          save_dir=os.path.join(output_dir, 'shap_bar_image_modalities.png'))
