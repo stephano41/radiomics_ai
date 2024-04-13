@@ -434,3 +434,6 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
 
     fig.savefig(save_dir, dpi=300)
     return fig
+
+def plot_dependence_scatter_plot():
+    pass

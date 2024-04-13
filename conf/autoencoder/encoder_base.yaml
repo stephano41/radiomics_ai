@@ -27,8 +27,8 @@ iterator_train__augment_transforms:
           p: 0.5
           label_keys: [mask]
           scales: 0.1
-          degrees: 0
-          translation: 0
+          degrees: 90
+          translation: 10
           isotropic: True
         - _target_: torchio.RandomFlip
           flip_probability: 0.5
