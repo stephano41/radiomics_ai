@@ -7,6 +7,7 @@ from src.models.autoencoder.med3d_resnet import med3d_resnet10
 import torch
 from src.models.autoencoder import NeuralNetEncoder
 from pytest import mark
+import numpy as np
 
 def test_nn_encoder():
     # generate random images batch 10, single channel, 16x16x16
@@ -32,9 +33,9 @@ def test_encoder_instantiation(cfg_tune):
         return
 
     HydraConfig().set_config(cfg_tune)
-    encoder = instantiate(cfg_tune.preprocessing.autoencoder)
+    encoder = instantiate(cfg_tune.preprocessing.autoencoder, _convert_='object')
 
-    encoder.fit([f'ID_{i+1}' for i in range(10)])
+    encoder.fit([f'ID_{i+1}' for i in range(10)], np.random.randint(2, size=10))
 
 
 @mark.parametrize('model', [med3d_resnet10(input_image_size=[96,96,96], shortcut_type='B', in_channels=5)], indirect=True)

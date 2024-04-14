@@ -2,7 +2,7 @@
 
 defaults:
     - meningioma.yaml
-    - /autoencoder: resnetsegvae
+    - /autoencoder: fmcibmodel
     - _self_
 
 name: meningioma+autoencoder
@@ -10,5 +10,8 @@ name: meningioma+autoencoder
 feature_dataset:
      additional_features: ['ID']
 
+# add in deep features as image modality
 analysis:
     image_modalities: ['registered_adc', 't2', 'flair', 't1', 't1ce', 'SegResNet']
+bootstrap:
+    num_processes: 2

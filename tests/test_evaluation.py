@@ -31,7 +31,7 @@ def test_bootstrap_multiprocessing(tmp_path):
                                module__latent_dim=64,
                                module__hidden_dims=[8, 16, 32],
                                module__finish_size=2,
-                               criterion='src.models.autoencoder.VAELoss',
+                               criterion='src.models.loss_funcs.VAELoss',
                                max_epochs=2,
                                dataset='src.dataset.dummy_dataset.DummyDataset',
                                device='cuda'

@@ -17,7 +17,23 @@ bootstrap:
     iters: 500
 
 optimizer:
-    n_trials: 1000
+    n_trials: 200
+
+models:
+  - Random Forest
+  - SVM
+  - Catboost
+
+preprocessing:
+    feature_selection_methods:
+        # - anova
+        - lasso
+        - linear_svc
+        - tree
+        - {_method_: sf, direction: backward, n_jobs: 5, tol: 0.05}
+        - {_method_: rfe, n_jobs: 5}
+        - mrmr
+        - pca
 
 analysis:
     image_modalities: ${feature_dataset.image_stems}

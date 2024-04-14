@@ -13,8 +13,7 @@ verbose: 1
 output_format: pandas
 optimizer: torch.optim.AdamW
 criterion: src.models.BetaVAELoss
-criterion__kld_weight: 0.1
-lr: 0.001
+
 iterator_train: src.dataset.transforming_dataloader.TransformingDataLoader
 iterator_train__shuffle: true
 iterator_train__augment_transforms:

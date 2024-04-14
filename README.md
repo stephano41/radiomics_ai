@@ -42,7 +42,7 @@ All results can be viewed via mlflow, whereas the detailed run configs would be 
 To launch mlflow:\
 `docker compose up app`\
 If running as dockerfile:\
-`sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest mlflow ui --host=0.0.0.0 --port=8000 --backend-store-uri=./outputs/models`
+`sudo docker run --gpus all --shm-size=1gb -it --rm -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest mlflow ui --host=0.0.0.0 --port=8000 --backend-store-uri=./outputs/models`
 
 ### Test runs
 
@@ -53,7 +53,7 @@ Sometimes it's necessary to see if the new run will run without any breaks in th
 To build the image:\
 `sudo docker build . -t steven_container`\
 To use the image:\
-`sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest python main.py`\
+`sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 --name "steven_container_$(date +'%Y%m%d%H%M%S')" steven_container:latest python main.py`\
 Replace python main.py with whatever commands
 
 ### Hydra terminal run tips

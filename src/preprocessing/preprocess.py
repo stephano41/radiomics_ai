@@ -24,6 +24,7 @@ def run_auto_preprocessing(
         use_feature_selection: bool = True,
         oversampling_methods: list[str] | None = None,
         feature_selection_methods: list[str] | None = None,
+        feature_first=True,
         autoencoder=None,
         encoder_colname='ID'
 ):
@@ -66,7 +67,8 @@ def run_auto_preprocessing(
                 feature_selection_method=selection_method,
                 oversampling_method=oversampling_method,
                 autoencoder=autoencoder,
-                encoder_colname=encoder_colname
+                encoder_colname=encoder_colname,
+                feature_first=feature_first
             )
             try:
                 log.info(f'preprocessing {selection_method} with {oversampling_method}')
@@ -90,14 +92,16 @@ class Preprocessor(OrigPreprocessor):
                  oversampling_method: str | None = None,
                  random_state: int = config.SEED,
                  autoencoder=None,
-                 encoder_colname='ID'
+                 encoder_colname='ID',
+                 feature_first=True
                  ):
         self.autoencoder = autoencoder
         self.encoder_colname = encoder_colname
         super().__init__(standardize=standardize,
                          feature_selection_method=feature_selection_method,
                          oversampling_method=oversampling_method,
-                         random_state=random_state)
+                         random_state=random_state,
+                         feature_first=feature_first)
 
     # def fit_transform(
     #         self, X: TrainingInput, y: TrainingLabels
