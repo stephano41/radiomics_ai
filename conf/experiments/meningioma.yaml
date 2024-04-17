@@ -34,6 +34,7 @@ preprocessing:
         - {_method_: rfe, n_jobs: 5}
         - mrmr
         - pca
+    feature_first: false
 
 analysis:
     image_modalities: ${feature_dataset.image_stems}
