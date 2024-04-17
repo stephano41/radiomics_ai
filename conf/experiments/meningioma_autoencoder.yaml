@@ -14,4 +14,5 @@ feature_dataset:
 analysis:
     image_modalities: ['registered_adc', 't2', 'flair', 't1', 't1ce', 'SegResNet']
 bootstrap:
-    num_processes: 2
+    num_processes: 1
+    # daemeons can't have their own children process

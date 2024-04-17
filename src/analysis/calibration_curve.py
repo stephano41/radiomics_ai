@@ -35,7 +35,7 @@ def plot_calibration_curve(run, save_dir=None):
 
     logger.info(hosmer_lemeshow(mean_prob_pred, mean_prob_true))
 
-    fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
+    fig, ax = plt.subplots(figsize=(8, 6))
     ax.plot([0, 1], [0, 1], "k:", label='Perfectly calibrated')
     ax.plot(mean_prob_pred, mean_prob_true, label='Mean Calibration Curve')
     ax.legend(loc="lower right")
@@ -48,7 +48,7 @@ def plot_calibration_curve(run, save_dir=None):
     if save_dir is None:
         plt.show()
     else:
-        fig.savefig(save_dir, dpi=300)
+        fig.savefig(save_dir, format='eps')
 
     return fig, ax
 
