@@ -38,7 +38,7 @@ def get_sample_size(config):
         logger.info(f'evaluating at sample size {sample_size}')
         # _, sample_x = train_test_split(feature_dataset.df, test_size=sample_size,
         #                              stratify=feature_dataset.y)
-        sample_x = split_sample_w_minority(feature_dataset.df, sample_size, 6, feature_dataset.y)
+        sample_x = split_sample_w_minority(feature_dataset.df, int(sample_size), 6, feature_dataset.y)
         sample_feature_ds = FeatureDataset(sample_x, target=config.feature_dataset.get('target_column', None), ID_colname='ID',
                               additional_features=config.feature_dataset.get('additional_features', []))
         sample_feature_ds = split_feature_dataset(sample_feature_ds,

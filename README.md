@@ -35,6 +35,13 @@ Accepts a run_id argument to analyze a specific run, or it'll analyze the last r
 </code><br>
 Requires specifying `model1_run_id` and `model2_run_id` to get the model and dataset artifacts
 </details>
+<details>
+<summary>Calculate sample size pipeline</summary>
+<code>docker compose run app python main.py experiments=meningioma pipeline._target_=src.pipeline.get_sample_size +sample_sizes=[115,110,100,90,80,70,60,50,40,30,20]
+</code><br>
+Requires specifying `model1_run_id` and `model2_run_id` to get the model and dataset artifacts
+</details>
+
 
 ### Viewing experiment results
 Results are stored between the hydra output folder and the artifacts folder of mlflow\

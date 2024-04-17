@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def tune_pipeline(config):
-    # setup dataset, extract features, split the data
+     # setup dataset, extract features, split the data
     feature_dataset = get_multimodal_feature_dataset(**OmegaConf.to_container(config.feature_dataset, resolve=True))
 
     output_dir = os.path.normpath(hydra.utils.HydraConfig.get().run.dir)
@@ -28,22 +28,27 @@ def tune_pipeline(config):
                                             save_path=os.path.join(output_dir, 'splits.yml'),
                                             **config.split)
 
+        # run auto preprocessing
+    if config.get('existing_processed_data_dir') is None:
+        run_auto_preprocessing(data=feature_dataset.data,
+                            result_dir=Path(output_dir),
+                            **OmegaConf.to_container(config.preprocessing, resolve=True))
+        logger.info('preprocessing finished, starting model initilisation') 
+        train_output_dir = output_dir
+    else:
+        train_output_dir=config.get('existing_processed_data_dir') 
+
     # initialise models
     if config.models is None:
         models = MLClassifier.initialize_default_sklearn_models()
     else:
         models = [MLClassifier.from_sklearn(model_name) for model_name in config.models]
-    logger.info('models initialised, starting auto preprocessing')
-    # run auto preprocessing
-    run_auto_preprocessing(data=feature_dataset.data,
-                           result_dir=Path(output_dir),
-                           **OmegaConf.to_container(config.preprocessing, resolve=True))
-    logger.info('preprocessing finished, starting hyperparameter tuning') 
+    logger.info('models initialised, starting hyperparameter tuning')
     # start training
     trainer = Trainer(
         dataset=feature_dataset,
         models=models,
-        result_dir=output_dir,
+        result_dir=train_output_dir,
         multi_class=config.multi_class,
         labels=config.labels,
         **config.get('trainer',{})

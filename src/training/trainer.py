@@ -69,9 +69,9 @@ class Trainer(OrigTrainer):
                 y_val,
                 _,
         ) in data.iter_training():
-            X_train = X_train.to_numpy()
+            X_train = X_train.to_numpy(np.float64)
             y_train = y_train.to_numpy()
-            X_val = X_val.to_numpy()
+            X_val = X_val.to_numpy(np.float64)
             y_val = y_val.to_numpy()
 
             try:
@@ -79,8 +79,11 @@ class Trainer(OrigTrainer):
             except ValueError as e:
                 log.error(f"Training {model.name} failed. \n{e}")
                 return np.nan
-
-            y_pred = model.predict_proba(X_val)
+            try:
+                y_pred = model.predict_proba(X_val)
+            except ValueError as e:
+                log.error(f"training {model.name} failed. {trial.params}")
+                raise e
 
             try:
                 auc_val = self.get_auc(y_val, y_pred)
