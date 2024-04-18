@@ -35,6 +35,13 @@ Accepts a run_id argument to analyze a specific run, or it'll analyze the last r
 </code><br>
 Requires specifying `model1_run_id` and `model2_run_id` to get the model and dataset artifacts
 </details>
+<details>
+<summary>Calculate sample size pipeline</summary>
+<code>docker compose run app python main.py experiments=meningioma pipeline._target_=src.pipeline.get_sample_size +sample_sizes=[115,110,100,90,80,70,60,50,40,30,20]
+</code><br>
+Requires specifying `model1_run_id` and `model2_run_id` to get the model and dataset artifacts
+</details>
+
 
 ### Viewing experiment results
 Results are stored between the hydra output folder and the artifacts folder of mlflow\
@@ -42,7 +49,7 @@ All results can be viewed via mlflow, whereas the detailed run configs would be 
 To launch mlflow:\
 `docker compose up app`\
 If running as dockerfile:\
-`sudo docker run --gpus all --shm-size=1gb -it --rm -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest mlflow ui --host=0.0.0.0 --port=8000 --backend-store-uri=./outputs/models`
+`sudo docker run --shm-size=1gb -it --rm -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest mlflow ui --host=0.0.0.0 --port=8000 --backend-store-uri=./outputs/models`
 
 ### Test runs
 
@@ -53,7 +60,7 @@ Sometimes it's necessary to see if the new run will run without any breaks in th
 To build the image:\
 `sudo docker build . -t steven_container`\
 To use the image:\
-`sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 --name "steven_container_$(date +'%Y%m%d%H%M%S')" steven_container:latest python main.py`\
+`sudo docker run --gpus all --shm-size=1gb -it -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 --name "steven_container_$(date +'%Y%m%d%H%M%S')" steven_container:latest python main.py`\
 Replace python main.py with whatever commands
 
 ### Hydra terminal run tips
