@@ -69,10 +69,13 @@ class Trainer(OrigTrainer):
                 y_val,
                 _,
         ) in data.iter_training():
-            X_train = X_train.to_numpy(np.float64)
+            X_train = X_train.to_numpy(np.float32)
             y_train = y_train.to_numpy()
-            X_val = X_val.to_numpy(np.float64)
+            X_val = X_val.to_numpy(np.float32)
             y_val = y_val.to_numpy()
+            
+            X_train[np.isinf(X_train)] = 0
+            X_val[np.isinf(X_val)] = 0
 
             try:
                 model.fit(X_train, y_train)

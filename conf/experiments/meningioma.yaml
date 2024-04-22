@@ -17,22 +17,22 @@ bootstrap:
     iters: 500
 
 optimizer:
-    n_trials: 50
+    n_trials: 200
 
 models:
-#   - Random Forest
+  - Random Forest
   - SVM
-#   - Catboost
+  - Catboost
 
 preprocessing:
     feature_selection_methods:
-        # - anova
-        # - lasso
-        # - linear_svc
-        # - tree
-        # - {_method_: sf, direction: backward, n_jobs: 5, tol: 0.05}
-        # - {_method_: rfe, n_jobs: 5}
-        # - mrmr
+        - anova
+        - lasso
+        - linear_svc
+        - tree
+        - {_method_: sf, direction: backward, n_jobs: 5, tol: 0.05}
+        - {_method_: rfe, n_jobs: 5}
+        - mrmr
         - pca
     feature_first: false
 

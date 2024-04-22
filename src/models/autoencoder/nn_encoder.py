@@ -84,7 +84,9 @@ class NeuralNetEncoder(NeuralNetClassifier, TransformerMixin):
           Whether train mode should be used or not.
 
         """
+        print(f'preconvert: {y_true.shape}')
         y_true = to_tensor(y_true, device=self.device)
+        print(f'postconvert: {y_true.shape}')
         loss = self.criterion_(y_pred, y_true)
 
         # allow for returning multiple losses

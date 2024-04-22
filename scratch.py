@@ -3,7 +3,7 @@ from src.dataset.visualisation import plot_slices
 from src.pipeline.pipeline_components import get_multimodal_feature_dataset
 import pandas as pd
 import torchio as tio
-from skorch.callbacks import EarlyStopping, GradientNormClipping, ParamMapper, PassthroughScoring
+from skorch.callbacks import EarlyStopping, GradientNormClipping, ParamMapper, PassthroughScoring, LRScheduler
 from src.dataset import TransformingDataLoader, SkorchSubjectsDataset
 from sklearn.model_selection import ParameterGrid
 from src.models import BetaVAELoss, NeuralNetEncoder, FMCIBModel, Med3DEncoder
@@ -15,6 +15,7 @@ import optuna
 from datetime import datetime
 import os
 import logging
+from torch.optim.lr_scheduler import StepLR
 # logging.basicConfig(level=logging.DEBUG)
 
 def freeze_net(net):
@@ -48,7 +49,9 @@ dataset_train_transform = tio.Compose([tio.Resample((1, 1, 1)),
                                                     ])
 encoder_kwargs = dict(module=FMCIBModel,
                     module__input_channels=5,
-                    module__weights_path='outputs/pretrained_models/model_weights.torch',
+                    module__weights_path='data/pretrained_models/model_weights.torch',
+                    module__output_class=1,
+                    module__latent_var_dim=2048,
                     #   module__block='BasicBlock',
                     #   module__blocks_down=[3, 4, 6, 3],
                     #   module__input_image_size=[96,96,96],
@@ -59,6 +62,7 @@ encoder_kwargs = dict(module=FMCIBModel,
                     max_epochs=200,
                     callbacks=[EarlyStopping(load_best=True),
                                GradientNormClipping(1),
+                               LRScheduler(policy=StepLR, step_size=30, monitor='val_loss', step_every='epoch')
                                 # ('classifier_loss',PassthroughScoring('classifier_loss'))
                             #    ParamMapper('trunk.*', schedule=freeze_net)
                                ],
@@ -72,7 +76,7 @@ encoder_kwargs = dict(module=FMCIBModel,
                                                                     tio.RandomFlip(flip_probability=0.5,
                                                                                    label_keys=('mask',), axes=(0, 1, 2))
                                                                     ]),
-                    iterator_train__num_workers=15,
+                    iterator_train__num_workers=10,
                     iterator_train__shuffle=True,
                     iterator_valid__num_workers=4,
                     dataset=SkorchSubjectsDataset,
@@ -82,7 +86,7 @@ encoder_kwargs = dict(module=FMCIBModel,
                     # dataset__image_stems=('t1ce','t1','flair'),
 
                     dataset__mask_stem='mask',
-                    device='cuda',
+                    device='cpu',
                     criterion="torch.nn.BCEWithLogitsLoss",
                     # criterion=BetaVAELoss,
                     # optimizer__param_groups=[
@@ -92,11 +96,11 @@ encoder_kwargs = dict(module=FMCIBModel,
                     #     ('heads.*', {'lr': 0.001}),
 
                     # ]
-                    optimizer__param_groups=[
-                        ['trunk.*', {'lr': 0.000001}],
-                        ['latent_var_head.*', {'lr':0.001}],
-                        ['heads.*', {'lr': 0.001}],
-                    ]
+                    # optimizer__param_groups=[
+                    #     ['trunk.*', {'lr': 0.000001}],
+                    #     ['latent_var_head.*', {'lr':0.001}],
+                    #     ['heads.*', {'lr': 0.001}],
+                    # ]
                     )
 
 # parameter_grid = ParameterGrid({'criterion__loss_type':['B'],'criterion__gamma':[2,4,6,8,16,32],'criterion__max_capacity':[5,25,50,100], 'criterion__Capacity_max_iter':[1e2,1e3,1e4,1e5,1e6]})
@@ -108,6 +112,7 @@ encoder_kwargs = dict(module=FMCIBModel,
 
 encoder = NeuralNetEncoder(**encoder_kwargs)
 roc_auc_scorer = make_scorer(roc_auc)
+print(feature_dataset.y.to_numpy().shape)
 scores = cross_val_score(encoder, id_list, feature_dataset.y.to_numpy(), cv=5, scoring=roc_auc_scorer, error_score='raise', verbose=2)
 print(f'cross validation scores: {scores.mean()}')
 print(f'cross validation scores std: {scores.std()}')

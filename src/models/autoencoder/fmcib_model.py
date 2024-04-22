@@ -12,15 +12,16 @@ logger = logging.getLogger(__name__)
 
 
 class FMCIBModel(nn.Module):
-    def __init__(self, trunk=None, weights_path=None, input_channels=1, output_class=2, latent_var_dim=256):
+    def __init__(self, trunk=None, weights_path=None, input_channels=1, output_class=1, latent_var_dim=2048):
         super().__init__()
         if trunk is None:
             trunk = resnet50(pretrained=False,
                      n_input_channels=input_channels,
                      widen_factor=2,
-                     conv1_t_stride=2,
+                    #  conv1_t_stride=2,
                      feed_forward=False,
-                     bias_downsample=True)
+                    #  bias_downsample=True,
+                     )
             
         self.trunk = trunk
         self.latent_var_head = nn.Linear(4096, latent_var_dim, bias=True)
