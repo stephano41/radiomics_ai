@@ -11,6 +11,8 @@ import pandas as pd
 import re
 import logging
 from tqdm import tqdm
+import SimpleITK as sitk
+
 
 
 logger = logging.getLogger(__name__)
@@ -101,14 +103,26 @@ def dicom_meta2nii(study_meta: pd.DataFrame, output_folder: str,
 
         series_path = match_row['series_path']
         series_name = re.sub(r'[^\w\s]', '', filter)
-        dicom2nifti.convert_dicom.dicom_series_to_nifti(original_dicom_directory=series_path,
+        dicom_series_to_nifti(original_dicom_directory=series_path,
                                                         output_file=os.path.join(output_folder,
-                                                                                 f"{patient_id}_{series_name}"),
-                                                        reorient_nifti=reorient)
+                                                                                 # f"{patient_id}_{series_name}.nii.gz"),
+                                                        f"{patient_id}_{series_name}.nii.gz"),
+
+        # reorient_nifti=reorient
+                              )
 
         filtered_df.append(match_row)
 
     return pd.concat(filtered_df, axis=1).T.reset_index(drop=True)
+
+
+def dicom_series_to_nifti(original_dicom_directory,output_file):
+    reader = sitk.ImageSeriesReader()
+    dicom_names = reader.GetGDCMSeriesFileNames(original_dicom_directory)
+    reader.SetFileNames(dicom_names)
+    image = reader.Execute()
+
+    sitk.WriteImage(image, output_file)
 
 
 def get_dicom_meta(instance_path: str, dicom_meta_params: Dict[str, str] = None):
