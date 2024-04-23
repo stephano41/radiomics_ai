@@ -44,9 +44,9 @@ class SkorchSubjectsDataset(SubjectsDataset):
         
         if y is None:
             y=[torch.Tensor([0])]*len(X)
-        # else:
-        #     identity_matrix = np.eye(len(np.unique(y)))
-        #     y = identity_matrix[y]
+        else:
+            identity_matrix = np.eye(len(np.unique(y)))
+            y = identity_matrix[y]
         # self.identity_matrix = np.eye(len(max(np.unique(y), 2)))
         self.id_map = dict(zip(X, y))
         super().__init__(subject_list, transform, load_getitem=load_getitem)
@@ -55,7 +55,7 @@ class SkorchSubjectsDataset(SubjectsDataset):
         subject = super().__getitem__(item)
         out_X = torch.concatenate([i.data for i in subject.get_images()]).type(torch.FloatTensor)
         # print(out_X.dtype)
-        return out_X, torch.tensor([self.id_map[subject.ID]]).float()
+        return out_X, torch.Tensor(self.id_map[subject.ID]).float()
 
     def get_subjects_list(self, X):
         subjects = []

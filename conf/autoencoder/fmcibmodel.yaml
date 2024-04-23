@@ -7,12 +7,20 @@ defaults:
 
 module: src.models.FMCIBModel
 module__input_channels: 5
+module__output_class: 2
+module__latent_var_dim: 2048
 module__weights_path: 'outputs/pretrained_models/model_weights.torch'
-batch_size: 3
+batch_size: 5
+lr: 0.0001
+weighted_sampler: true
+weighted_sampler_weights: [0.016, 0.09]
+criterion__weight: 
+    _target_: torch.tensor
+    _args_:
+        - [0.016, 0.09]
 max_epochs: 200
 verbose: 1
-criterion: "torch.nn.BCEWithLogitsLoss"
-optimizer__param_groups: [['trunk.*', {'lr': 0.000001}],['latent_var_head.*',{'lr':0.001}],['heads.*', {'lr': 0.001}]]
+criterion: "torch.nn.BCELoss"
 
 device: cuda
 iterator_train__num_workers: ${cpu_per_task}

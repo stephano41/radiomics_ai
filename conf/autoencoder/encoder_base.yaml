@@ -50,6 +50,8 @@ dataset__transform:
         - _target_: torchio.CropOrPad
           target_shape: [96,96,96]
           mask_name: mask
+        - _target_: torchio.Resize
+          target_shape: [50,50,50]
         - _target_: torchio.ZNormalization
           masking_method: mask
 
