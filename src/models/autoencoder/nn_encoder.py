@@ -10,13 +10,16 @@ from sklearn.base import TransformerMixin
 from skorch import NeuralNet, NeuralNetClassifier
 from skorch.callbacks import PassthroughScoring, PrintLog, EpochTimer
 from skorch.utils import to_device, to_tensor, to_numpy
-
+import torch
+from torch.utils.data import WeightedRandomSampler
 from src.models.autoencoder.base_vae import BaseVAE
 
 
 class NeuralNetEncoder(NeuralNetClassifier, TransformerMixin):
-    def __init__(self, module: BaseVAE, output_format='numpy', **kwargs):
+    def __init__(self, module: BaseVAE, output_format='numpy', weighted_sampler=False, weighted_sampler_weights=None, **kwargs):
         self.output_format = output_format
+        self.weighted_sampler=weighted_sampler
+        self.weighted_sampler_weights = weighted_sampler_weights
 
         super().__init__(**preprocess_kwargs(module=module, **kwargs))
 
@@ -84,9 +87,7 @@ class NeuralNetEncoder(NeuralNetClassifier, TransformerMixin):
           Whether train mode should be used or not.
 
         """
-        print(f'preconvert: {y_true.shape}')
         y_true = to_tensor(y_true, device=self.device)
-        print(f'postconvert: {y_true.shape}')
         loss = self.criterion_(y_pred, y_true)
 
         # allow for returning multiple losses
@@ -96,6 +97,39 @@ class NeuralNetEncoder(NeuralNetClassifier, TransformerMixin):
             return loss['loss']
 
         return loss
+    
+
+    def get_weighted_sampler(self, dataset):
+        train_targets=torch.tensor(list(dataset.dataset.id_map.values())).argmax(axis=1)[dataset.indices]
+
+        if self.weighted_sampler_weights is None:
+            class_sample_count = torch.tensor([(train_targets == t).sum() for t in torch.unique(train_targets, sorted=True)])
+            weight = 1. / class_sample_count.float()
+        else:
+            weight = torch.tensor(self.weighted_sampler_weights).float()
+        samples_weight = torch.tensor([weight[t] for t in train_targets.type(torch.int)])
+        return WeightedRandomSampler(samples_weight, len(samples_weight))
+
+    
+    def get_iterator(self, dataset, training=False):
+        if training:
+            kwargs = self.get_params_for('iterator_train')
+            iterator = self.iterator_train
+
+            if self.weighted_sampler:
+                kwargs.update({"sampler": self.get_weighted_sampler(dataset), 'shuffle': False})
+                
+        else:
+            kwargs = self.get_params_for('iterator_valid')
+            iterator = self.iterator_valid
+
+        if 'batch_size' not in kwargs:
+            kwargs['batch_size'] = self.batch_size
+
+        if kwargs['batch_size'] == -1:
+            kwargs['batch_size'] = len(dataset)
+
+        return iterator(dataset, **kwargs)
     
 
     @property

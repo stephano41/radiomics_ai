@@ -36,6 +36,7 @@ class FMCIBModel(nn.Module):
         out = self.trunk(x)
         out = self.latent_var_head(out)
         out = self.heads(out)
+        out = torch.sigmoid(out)
         return out
     
     def load(self, weights):
