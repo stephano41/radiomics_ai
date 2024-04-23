@@ -13,7 +13,6 @@ module__weights_path: 'outputs/pretrained_models/model_weights.torch'
 batch_size: 5
 lr: 0.0001
 weighted_sampler: true
-weighted_sampler_weights: [0.016, 0.09]
 criterion__weight: 
     _target_: torch.tensor
     _args_:

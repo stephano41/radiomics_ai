@@ -7,7 +7,6 @@ from autorad.feature_extraction import FeatureExtractor
 from autorad.utils.extraction_utils import filter_pyradiomics_names
 from autorad.utils.preprocessing import get_paths_with_separate_folder_per_case
 from hydra.utils import instantiate
-from collections.abc import Mapping
 from autorad.models import MLClassifier
 from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
 
