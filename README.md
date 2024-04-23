@@ -60,7 +60,7 @@ Sometimes it's necessary to see if the new run will run without any breaks in th
 To build the image:\
 `sudo docker build . -t steven_container`\
 To use the image:\
-`sudo docker run --gpus all --shm-size=1gb -it -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 --name "steven_container_$(date +'%Y%m%d%H%M%S')" steven_container:latest python main.py`\
+`sudo docker run --gpus all --shm-size=8gb -it -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 --name "steven_container_$(date +'%Y%m%d%H%M%S')" steven_container:latest python main.py`\
 Replace python main.py with whatever commands
 
 ### Hydra terminal run tips

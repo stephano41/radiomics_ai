@@ -11,7 +11,7 @@ _target_: src.models.NeuralNetEncoder
 max_epochs: 100
 verbose: 1
 output_format: pandas
-optimizer: torch.optim.AdamW
+optimizer: torch.optim.Adam
 criterion: src.models.BetaVAELoss
 
 iterator_train: src.dataset.transforming_dataloader.TransformingDataLoader
@@ -48,7 +48,7 @@ dataset__transform:
           masking_method: mask
           outside_value: 0
         - _target_: torchio.CropOrPad
-          target_shape: [96,96,96]
+          target_shape: [88,88,88]
           mask_name: mask
         - _target_: torchio.Resize
           target_shape: [50,50,50]

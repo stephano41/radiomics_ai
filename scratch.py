@@ -44,7 +44,7 @@ id_list = feature_dataset.X['ID'].to_numpy()
 dataset_train_transform = tio.Compose([tio.Resample((1, 1, 1)),
                                                     tio.ToCanonical(),
                                                     tio.Mask(masking_method='mask', outside_value=0),
-                                                    tio.CropOrPad(target_shape=(96, 96, 96), mask_name='mask'),
+                                                    tio.CropOrPad(target_shape=(88, 88, 88), mask_name='mask'),
                                                     tio.Resize(target_shape=(50,50,50)),
                                                     # tio.RescaleIntensity(masking_method='mask'),
                                                     tio.ZNormalization(masking_method='mask'),
@@ -92,7 +92,7 @@ encoder_kwargs = dict(module=FMCIBModel,
                     criterion="torch.nn.BCELoss",
                     criterion__weight=torch.tensor([0.016,0.09]),
                     weighted_sampler=True,
-                    weighted_sampler_weights=[0.016,0.09]
+                    # weighted_sampler_weights=[0.016,0.09]
                     # criterion=BetaVAELoss,
                     # optimizer__param_groups=[
                     #     ('convInit.*', {'lr': 0.000001}),
