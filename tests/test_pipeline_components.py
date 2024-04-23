@@ -29,6 +29,14 @@ def test_auto_preprocessing(tmp_path, feature_dataset_path, additional_features,
                            autoencoder=autoencoder
                            )
 
+@mark.parametrize('cfg_tune', [['experiments=meningioma', 'bootstrap.iters=5',
+                                'optimizer.n_trials=5']], indirect=True)
+def test_model_initialisation(cfg_tune):
+    from autorad.models import MLClassifier
+    models = [MLClassifier.from_sklearn(model_name) for model_name in cfg_tune.models]
+
+    assert models
+
 
 @mark.parametrize("feature_dataset_path", ['./tests/meningioma_feature_dataset.csv', './tests/extracted_features.csv'])
 @mark.parametrize("additional_features,autoencoder", [([], None), (['ID'], 'get_dummy_autoencoder')])
