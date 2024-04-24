@@ -28,8 +28,7 @@ def run_analysis(config):
         shap_values, _, _ = get_shap_values(run)
 
     plot_shap_bar(shap_values, max_display=200,
-                  save_dir=os.path.join(output_dir, 'shap_bar_plot_overview.eps'),
-                  size=(25, 48))
+                  save_dir=os.path.join(output_dir, 'shap_bar_plot_overview.png'))
 
     dependence_save_dir=os.path.join(output_dir, 'shap_dependence_scatter_plots')
     os.makedirs(dependence_save_dir, exist_ok=True)
@@ -37,9 +36,9 @@ def run_analysis(config):
 
     if config.analysis.get('image_modalities', None) is not None:
         summate_shap_bar(shap_values, config.analysis.image_modalities,
-                         save_dir=os.path.join(output_dir, 'shap_bar_image_modalities.eps'))
+                         save_dir=os.path.join(output_dir, 'shap_bar_image_modalities.png'))
     summate_shap_bar(shap_values, config.analysis.feature_classes,
-                     save_dir=os.path.join(output_dir, 'shap_bar_feature_classe.eps'))
+                     save_dir=os.path.join(output_dir, 'shap_bar_feature_classe.png'))
     if config.multi_class == 'raise':
         # only do this if binary cases
-        plot_calibration_curve(run, save_dir=os.path.join(output_dir, 'calibration_curve.eps'))
+        plot_calibration_curve(run, save_dir=os.path.join(output_dir, 'calibration_curve.png'))

@@ -6,6 +6,7 @@ from pytest import mark
 import os
 from sklearn.datasets import make_classification
 
+
 @mark.parametrize("feature_dataset_path", ['./tests/meningioma_feature_dataset.csv', './tests/extracted_features.csv'])
 @mark.parametrize("additional_features,autoencoder", [([], None), (['ID'], 'get_dummy_autoencoder')])
 def test_auto_preprocessing(tmp_path, feature_dataset_path, additional_features, autoencoder, request):
