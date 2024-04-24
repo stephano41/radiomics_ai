@@ -48,7 +48,7 @@ def get_sample_size(config):
         if config.models is None:
             models = MLClassifier.initialize_default_sklearn_models()
         else:
-            models = [MLClassifier.from_sklearn(model_name) for model_name in config.models]
+            models = [MLClassifier.from_sklearn(model_name) for model_name in OmegaConf.to_container(config.models, resolve=True)]
 
         run_auto_preprocessing(data=sample_feature_ds.data,
                                result_dir=Path(output_dir),

@@ -42,7 +42,7 @@ def tune_pipeline(config):
     if config.models is None:
         models = MLClassifier.initialize_default_sklearn_models()
     else:
-        models = [MLClassifier.from_sklearn(model_name) for model_name in config.models]
+        models = [MLClassifier.from_sklearn(model_name) for model_name in OmegaConf.to_container(config.models, resolve=True)]
     logger.info('models initialised, starting hyperparameter tuning')
     # start training
     trainer = Trainer(

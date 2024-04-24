@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
-
+from omegaconf import OmegaConf
+import pytest
 from pytest import mark
 import os
+from sklearn.datasets import make_classification
 
 @mark.parametrize("feature_dataset_path", ['./tests/meningioma_feature_dataset.csv', './tests/extracted_features.csv'])
 @mark.parametrize("additional_features,autoencoder", [([], None), (['ID'], 'get_dummy_autoencoder')])
@@ -33,9 +35,27 @@ def test_auto_preprocessing(tmp_path, feature_dataset_path, additional_features,
                                 'optimizer.n_trials=5']], indirect=True)
 def test_model_initialisation(cfg_tune):
     from autorad.models import MLClassifier
-    models = [MLClassifier.from_sklearn(model_name) for model_name in cfg_tune.models]
 
-    assert models
+    X, y = make_classification(n_samples=100, n_features=20, n_informative=2, n_redundant=0, n_classes=2, random_state=42)
+    models = [MLClassifier.from_sklearn(model_name) for model_name in OmegaConf.to_container(cfg_tune.models, resolve=True)]
+
+    for model in models:
+        # Check if the model initializes without error
+        assert model is not None, "Failed to initialize the model."
+
+        # Test model fitting
+        try:
+            model.fit(X, y)
+        except Exception as e:
+            pytest.fail(f"Model failed to fit: {e}")
+
+        # Test model prediction
+        try:
+            predictions = model.predict(X)
+            # Verify that predictions are returned and have the correct shape
+            assert len(predictions) == len(y), "Predictions and true labels length mismatch."
+        except Exception as e:
+            pytest.fail(f"Model failed to predict: {e}")
 
 
 @mark.parametrize("feature_dataset_path", ['./tests/meningioma_feature_dataset.csv', './tests/extracted_features.csv'])
