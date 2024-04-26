@@ -4,6 +4,7 @@ import pandas as pd
 from autorad.inference.infer_utils import get_last_run_from_experiment_name, load_dataset_artifacts
 from src.analysis.shap import get_shap_values, plot_shap_bar, summate_shap_bar, plot_dependence_scatter_plot
 from src.analysis.calibration_curve import plot_calibration_curve
+from src.analysis.correlation_plot import plot_correlation_graph
 import os
 
 logger = logging.getLogger(__name__)
@@ -42,3 +43,5 @@ def run_analysis(config):
     if config.multi_class == 'raise':
         # only do this if binary cases
         plot_calibration_curve(run, save_dir=os.path.join(output_dir, 'calibration_curve.png'))
+    
+    plot_correlation_graph(run, save_dir=os.path.join(output_dir, 'feature_correlation_plot.png'), x_axis_labels=config.labels)

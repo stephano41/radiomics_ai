@@ -1,6 +1,6 @@
 # @package _global_
 name: meningioma
-labels: [0,1]
+labels: ["Grade 1","Grade 2"]
 multi_class: raise
 
 feature_dataset:
@@ -30,8 +30,8 @@ preprocessing:
         - lasso
         - linear_svc
         - tree
-        - {_method_: sf, direction: backward, n_jobs: 5, tol: 0.05}
-        - {_method_: rfe, n_jobs: 5}
+        - {_method_: sf, direction: forward, n_jobs: 5, tol: 0.05, n_features_to_select: Null}
+        - rfe
         - mrmr
         - pca
     feature_first: true
