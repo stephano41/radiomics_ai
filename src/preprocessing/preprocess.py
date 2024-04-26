@@ -58,6 +58,10 @@ def run_auto_preprocessing(
     else:
         feature_selection_methods = [None]
 
+    if autoencoder is not None:
+        autoencoder_preprocessor = Preprocessor(standardize=False, feature_selection_method=None, oversampling_method=None, autoencoder=autoencoder,  encoder_colname=encoder_colname, feature_first=feature_first)
+        data = autoencoder_preprocessor.fit_transform_data(data)
+
     preprocessed = {}
     for selection_method in feature_selection_methods:
         preprocessed[str(selection_method)] = {}
@@ -66,7 +70,7 @@ def run_auto_preprocessing(
                 standardize=True,
                 feature_selection_method=selection_method,
                 oversampling_method=oversampling_method,
-                autoencoder=autoencoder,
+                autoencoder=None,
                 encoder_colname=encoder_colname,
                 feature_first=feature_first
             )
@@ -188,13 +192,7 @@ class Preprocessor(OrigPreprocessor):
     def _build_pipeline(self):
         pipeline = super()._build_pipeline()
         if self.autoencoder is not None:
-            try:
-                autoencoder = instantiate(self.autoencoder, _convert_='object')
-            except hydra.errors.InstantiationException:
-                if isinstance(self.autoencoder, collections.abc.Mapping):
-                    raise TypeError("autoencoder passed couldn't be instantiated but is a dictionary like object")
-                print("hydra instantiation of autoencoder failed, autoencoder better be a working object")
-                autoencoder = self.autoencoder
+            autoencoder = instantiate_autoencoder(self.autoencoder)
 
             pipeline.steps.insert(0,
                 ("autoencoder",
@@ -208,3 +206,16 @@ class Preprocessor(OrigPreprocessor):
     # def get_params(self, deep=None):
     #     return {key: getattr(self, key) for key in inspect.signature(self.__init__).parameters.keys() if
     #             key != "self"}
+
+
+def instantiate_autoencoder(autoencoder_config):
+    try:
+        autoencoder = instantiate(autoencoder_config, _convert_='object')
+    except hydra.errors.InstantiationException:
+        if isinstance(autoencoder_config, collections.abc.Mapping):
+            raise TypeError("autoencoder passed couldn't be instantiated but is a dictionary like object")
+        print("hydra instantiation of autoencoder failed, autoencoder better be a working object")
+        autoencoder = autoencoder_config
+    return autoencoder
+    
+
