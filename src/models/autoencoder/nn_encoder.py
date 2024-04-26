@@ -100,7 +100,7 @@ class NeuralNetEncoder(NeuralNetClassifier, TransformerMixin):
     
 
     def get_weighted_sampler(self, dataset):
-        train_targets=torch.tensor(list(dataset.dataset.id_map.values())).argmax(axis=1)[dataset.indices]
+        train_targets=torch.tensor(dataset.dataset.y).argmax(axis=1)[dataset.indices]
 
         if self.weighted_sampler_weights is None:
             class_sample_count = torch.tensor([(train_targets == t).sum() for t in torch.unique(train_targets, sorted=True)])

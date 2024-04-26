@@ -40,6 +40,8 @@ class SkorchSubjectsDataset(SubjectsDataset):
                                                                       image_stems=image_stems,
                                                                       mask_stem=mask_stem,
                                                                       relative=False)
+        self.X = X
+        
         subject_list= self.get_subjects_list(X)
         
         if y is None:
@@ -47,6 +49,9 @@ class SkorchSubjectsDataset(SubjectsDataset):
         else:
             identity_matrix = np.eye(len(np.unique(y)))
             y = identity_matrix[y]
+        
+        self.y= y
+
         # self.identity_matrix = np.eye(len(max(np.unique(y), 2)))
         self.id_map = dict(zip(X, y))
         super().__init__(subject_list, transform, load_getitem=load_getitem)
