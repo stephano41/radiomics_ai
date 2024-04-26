@@ -19,12 +19,6 @@ import logging
 from torch.optim.lr_scheduler import StepLR
 # logging.basicConfig(level=logging.DEBUG)
 
-def freeze_net(net):
-    if len(net.history) <=5:
-        return skorch.utils.freeze_parameter
-    else:
-        return skorch.utils.unfreeze_parameter
-
 # setup dataset, extract features, split the data
 feature_dataset = get_multimodal_feature_dataset(data_dir='./data/meningioma_data',
                                                  image_stems=('registered_adc', 't2', 'flair', 't1', 't1ce'),

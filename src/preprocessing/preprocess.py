@@ -62,31 +62,61 @@ def run_auto_preprocessing(
         autoencoder_preprocessor = Preprocessor(standardize=False, feature_selection_method=None, oversampling_method=None, autoencoder=autoencoder,  encoder_colname=encoder_colname, feature_first=feature_first)
         data = autoencoder_preprocessor.fit_transform_data(data)
 
-    preprocessed = {}
-    for selection_method in feature_selection_methods:
-        preprocessed[str(selection_method)] = {}
+    if feature_first:
+        preprocessed_feature_selection = {}
+        for selection_method in feature_selection_methods:
+            fs_preprocessor = Preprocessor(standardize=True, feature_selection_method=selection_method, 
+                                           oversampling_method=None, 
+                                           autoencoder=None, 
+                                           encoder_colname=encoder_colname,
+                                           feature_first=feature_first)
+            log.info(f'preprocessing with {selection_method}')
+            preprocessed_feature_selection[str(selection_method)]=fs_preprocessor.fit_transform_data(data)
+            if not preprocessed_feature_selection[str(selection_method)]:
+                del preprocessed_feature_selection[str(selection_method)]
+        preprocessed={}
+        for selection_method, selected_data in preprocessed_feature_selection.items():
+            preprocessed[str(selection_method)]= {}
+            for oversampling_method in oversampling_methods:
+                log.info(f'preprocessing with {selection_method} with {oversampling_method}')
+
+                preprocessor = Preprocessor(standardize=False, feature_selection_method=None, 
+                                           oversampling_method=oversampling_method, 
+                                           autoencoder=None, 
+                                           encoder_colname=encoder_colname,
+                                           feature_first=feature_first)
+                preprocessed[str(selection_method)][str(oversampling_method)] = preprocessor.fit_transform_data(selected_data)
+    else:
+        preprocessed_over_sampling = {}
         for oversampling_method in oversampling_methods:
-            preprocessor = Preprocessor(
-                standardize=True,
-                feature_selection_method=selection_method,
-                oversampling_method=oversampling_method,
-                autoencoder=None,
-                encoder_colname=encoder_colname,
-                feature_first=feature_first
-            )
-            try:
-                log.info(f'preprocessing {selection_method} with {oversampling_method}')
-                preprocessed[str(selection_method)][
-                    str(oversampling_method)
-                ] = preprocessor.fit_transform_data(data)
-            except AssertionError:
-                log.error(
-                    f"Preprocessing failed with {selection_method} and {oversampling_method}."
-                )
-        if not preprocessed[str(selection_method)]:
-            del preprocessed[str(selection_method)]
+            log.info(f'preprocessing with {oversampling_method}')
+            oversampling_preprocessor = Preprocessor(standardize=True, feature_selection_method=None, 
+                                           oversampling_method=oversampling_method, 
+                                           autoencoder=None, 
+                                           encoder_colname=encoder_colname,
+                                           feature_first=feature_first)
+            preprocessed_over_sampling[str(oversampling_method)] = oversampling_preprocessor.fit_transform_data(data)
+        preprocessed={}
+        for selection_method in feature_selection_methods:
+            preprocessed[str(selection_method)] = {}
+            for oversampling_method, oversampled_data in preprocessed_over_sampling.items():
+                log.info(f'preprocessing with {selection_method} with {oversampling_method}')
+                preprocessor = Preprocessor(standardize=False, feature_selection_method=selection_method, 
+                            oversampling_method=None, 
+                            autoencoder=None, 
+                            encoder_colname=encoder_colname,
+                            feature_first=feature_first)
+                preprocessed[str(selection_method)][str(oversampling_method)] = preprocessor.fit_transform_data(oversampled_data)
+            if not preprocessed[str(selection_method)]:
+                del preprocessed[str(selection_method)]
+
+    final_preprocessor = Preprocessor(standardize=True, feature_selection_method=selection_method, 
+                            oversampling_method=oversampling_method, 
+                            autoencoder=autoencoder, 
+                            encoder_colname=encoder_colname,
+                            feature_first=feature_first)
     with open(Path(result_dir) / "preprocessed.pkl", "wb") as f:
-        joblib.dump((preprocessed, preprocessor.get_params()), f)
+        joblib.dump((preprocessed, final_preprocessor.get_params()), f)
 
 
 class Preprocessor(OrigPreprocessor):
