@@ -44,4 +44,4 @@ def run_analysis(config):
         # only do this if binary cases
         plot_calibration_curve(run, save_dir=os.path.join(output_dir, 'calibration_curve.png'))
     
-    plot_correlation_graph(run, save_dir=os.path.join(output_dir, 'feature_correlation_plot.png'), x_axis_labels=config.labels)
+    plot_correlation_graph(run, feature_names=shap_values.feature_names, save_dir=os.path.join(output_dir, 'feature_correlation_plot.png'), x_axis_labels=config.labels)

@@ -12,7 +12,7 @@ feature_dataset:
 
 # add in deep features as image modality
 analysis:
-    image_modalities: ['registered_adc', 't2', 'flair', 't1', 't1ce', 'SegResNet']
+    image_modalities: ['adc$', 't2$', 'flair$', 't1$', 't1ce$', 'SegResNet']
 bootstrap:
     num_processes: 1
     # daemeons can't have their own children process

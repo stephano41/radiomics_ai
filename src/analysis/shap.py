@@ -23,6 +23,7 @@ from shap.plots._utils import (
     merge_nodes,
     sort_inds,
 )
+import string
 
 
 def get_shap_values(run: str | pd.Series, existing_feature_df=None, existing_splits=None):
@@ -412,8 +413,9 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
     result_feature_count = {}
     for substring in feature_substrings:
         features = pd_shap_values.filter(regex=substring)
-        result_feature_values[substring] = features.mean() if not features.empty else 0
-        result_feature_count[substring] = len(features)
+        stripped_substring = substring.translate(str.maketrans('', '', string.punctuation))
+        result_feature_values[stripped_substring] = features.mean() if not features.empty else 0
+        result_feature_count[stripped_substring] = len(features)
 
     sorted_feature_values = sorted(result_feature_values.items(), key=lambda x: x[1], reverse=False)
 
