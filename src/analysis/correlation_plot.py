@@ -23,15 +23,18 @@ def plot_correlation_graph(run, feature_names=None, x_axis_labels=None, plots_pe
     selected_dataframe = feature_dataset.df[feature_names + [feature_dataset.target]]
 
     num_vars = len(selected_dataframe.columns) - 1  # Exclude the dependent variable
-    num_rows = (num_vars - 1) // plots_per_row + 1
+
+    plots_per_row_ = min(plots_per_row, num_vars)
+
+    num_rows = (num_vars - 1) // plots_per_row_ + 1
 
     # sns.set_theme(style="whitegrid", palette="gray")
 
-    fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row, figsize=(15, 5*num_rows))
+    fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row_, figsize=(15, 5*num_rows))
 
     for i, col in enumerate(selected_dataframe.columns[:-1]):  # Exclude the last column which is the dependent variable
-        row = i // plots_per_row
-        col_idx = i % plots_per_row
+        row = i // plots_per_row_
+        col_idx = i % plots_per_row_
 
         if len(axes.shape)==2:
             selected_ax = axes[row, col_idx]

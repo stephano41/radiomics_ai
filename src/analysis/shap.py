@@ -394,13 +394,13 @@ def plot_shap_bar(shap_values, max_display=10, save_dir=None, size=None):
 
     if size is not None:
         fig.set_size_inches(size, forward=True)
-    fig.tight_layout()
+    # fig.tight_layout()
 
     if save_dir is None:
         plt.show()
         return fig, ax
 
-    fig.savefig(save_dir, dpi=1200)
+    fig.savefig(save_dir, dpi=1200, bbox_inches='tight')
     return fig, ax
 
 
