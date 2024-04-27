@@ -48,7 +48,7 @@ def plot_calibration_curve(run, save_dir=None):
     if save_dir is None:
         plt.show()
     else:
-        fig.savefig(save_dir, dpi=1200)
+        fig.savefig(save_dir, dpi=1200, bbox_inches='tight')
 
     return fig, ax
 

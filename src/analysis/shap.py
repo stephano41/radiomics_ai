@@ -414,7 +414,7 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
     for substring in feature_substrings:
         features = pd_shap_values.filter(regex=substring)
         stripped_substring = substring.translate(str.maketrans('', '', string.punctuation))
-        result_feature_values[stripped_substring] = features.mean() if not features.empty else 0
+        result_feature_values[stripped_substring] = features.sum() if not features.empty else 0
         result_feature_count[stripped_substring] = len(features)
 
     sorted_feature_values = sorted(result_feature_values.items(), key=lambda x: x[1], reverse=False)
@@ -429,7 +429,7 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
         plt.text(result_feature_values[category], index,
                  f"{format_value(result_feature_values[category], '%+.2e')} (n={result_feature_count[category]})")
 
-    plt.xlabel('Mean SHAP Value')
+    plt.xlabel('SHAP Value')
 
     fig = plt.gcf()
 
@@ -445,13 +445,39 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
     return fig
 
 
-def plot_dependence_scatter_plot(shap_values, n_features, save_dir=None):
+def plot_dependence_scatter_plot(shap_values, n_features, save_dir=None, plots_per_row=3):
     top_features_indices = np.mean(np.abs(shap_values.values), 0).argsort()
     n_features = min(n_features, len(top_features_indices))
-    for idx in range(n_features):
-        shap.plots.scatter(shap_values[:, np.where(top_features_indices==idx)[0][0]])
-        if save_dir is not None:
-            plt.savefig(f"{save_dir}/dependence_plot_feature_{idx}.png", dpi=1200)
-        else:
-            plt.show()
-        plt.close('all')
+
+    plots_per_row_ = min(plots_per_row, n_features)
+    num_rows = (n_features - 1) // plots_per_row_ + 1
+
+    fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row_, figsize=(6*plots_per_row, 6*num_rows))
+
+    for idx in range(len(axes.flatten())):
+        row = idx // plots_per_row_
+        col_idx = idx % plots_per_row_
+
+        if len(axes.shape)==2:
+            selected_ax = axes[row, col_idx]
+        elif len(axes.shape)==1:
+            selected_ax = axes[col_idx]
+        
+        if idx >= n_features:
+            fig.delaxes(selected_ax)
+            continue
+    
+        shap.plots.scatter(shap_values[:, np.where(top_features_indices==idx)[0][0]], ax=selected_ax, show=False)
+
+        xlabel = selected_ax.get_xlabel()
+        ylabel = selected_ax.get_ylabel()
+
+        plt.xlabel(xlabel, fontsize=10)  # Adjust fontsize as needed
+        plt.ylabel(ylabel, fontsize=10)
+    
+    if save_dir is not None:
+        fig.savefig(f"{save_dir}/dependence_plot_feature.png", dpi=1200, bbox_inches='tight')
+    else:
+        plt.tight_layout()
+        plt.show()
+    plt.close('all')

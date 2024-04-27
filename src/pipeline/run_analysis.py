@@ -31,9 +31,7 @@ def run_analysis(config):
     plot_shap_bar(shap_values, max_display=200,
                   save_dir=os.path.join(output_dir, 'shap_bar_plot_overview.png'))
 
-    dependence_save_dir=os.path.join(output_dir, 'shap_dependence_scatter_plots')
-    os.makedirs(dependence_save_dir, exist_ok=True)
-    plot_dependence_scatter_plot(shap_values, 10, save_dir=dependence_save_dir)
+    plot_dependence_scatter_plot(shap_values, 10, save_dir=output_dir)
 
     if config.analysis.get('image_modalities', None) is not None:
         summate_shap_bar(shap_values, config.analysis.image_modalities,
@@ -44,4 +42,4 @@ def run_analysis(config):
         # only do this if binary cases
         plot_calibration_curve(run, save_dir=os.path.join(output_dir, 'calibration_curve.png'))
     
-    plot_correlation_graph(run, feature_names=shap_values.feature_names, save_dir=os.path.join(output_dir, 'feature_correlation_plot.png'), x_axis_labels=config.labels)
+    plot_correlation_graph(run, feature_names=shap_values.feature_names, plots_per_row=2, save_dir=os.path.join(output_dir, 'feature_correlation_plot.png'), x_axis_labels=config.labels)
