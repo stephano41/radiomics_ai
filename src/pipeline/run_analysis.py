@@ -5,6 +5,7 @@ from autorad.inference.infer_utils import get_last_run_from_experiment_name, loa
 from src.analysis.shap import get_shap_values, plot_shap_bar, summate_shap_bar, plot_dependence_scatter_plot
 from src.analysis.calibration_curve import plot_calibration_curve
 from src.analysis.correlation_plot import plot_correlation_graph
+from src.analysis.decision_curve import plot_net_benefit
 import os
 
 logger = logging.getLogger(__name__)
@@ -38,8 +39,14 @@ def run_analysis(config):
                          save_dir=os.path.join(output_dir, 'shap_bar_image_modalities.png'))
     summate_shap_bar(shap_values, config.analysis.feature_classes,
                      save_dir=os.path.join(output_dir, 'shap_bar_feature_classe.png'))
-    if config.multi_class == 'raise':
-        # only do this if binary cases
-        plot_calibration_curve(run, save_dir=os.path.join(output_dir, 'calibration_curve.png'))
-    
+  
     plot_correlation_graph(run, feature_names=shap_values.feature_names, plots_per_row=2, save_dir=os.path.join(output_dir, 'feature_correlation_plot.png'), x_axis_labels=config.labels)
+
+    if 'bootstrap_scores.pkl' in os.listdir(output_dir):
+        if config.multi_class == 'raise':
+            # only do this if binary cases
+            plot_calibration_curve(run, save_dir=os.path.join(output_dir, 'calibration_curve.png'))
+
+            plot_net_benefit(run, save_dir=os.path.join(output_dir, 'decision_curve.png'), estimator_name='model')
+    else:
+        logger.warn('No bootstrap scores found, not running analysis dependent on it')

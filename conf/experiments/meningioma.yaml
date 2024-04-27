@@ -34,7 +34,7 @@ preprocessing:
         - rfe
         - mrmr
         - pca
-    feature_first: true
+    feature_first: false
 
 analysis:
     image_modalities: ['adc$', 't2$', 'flair$', 't1$', 't1ce$']
