@@ -37,7 +37,7 @@ def plot_calibration_curve(run, save_dir=None):
 
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.plot([0, 1], [0, 1], "k:", label='Perfectly calibrated')
-    ax.plot(mean_prob_pred, mean_prob_true, label='Mean Calibration Curve')
+    ax.plot(mean_prob_pred, mean_prob_true, label='Mean calibration curve')
     ax.legend(loc="lower right")
     ax.set(xlabel="Mean predicted probability", ylabel="Fraction of positives")
     ax.set_aspect('equal', adjustable='box')

@@ -4,6 +4,8 @@ from autorad.inference import infer_utils
 import seaborn as sns
 import matplotlib.pyplot as plt
 import mlflow
+import string
+
 
 def plot_correlation_graph(run, feature_names=None, x_axis_labels=None, plots_per_row=3, save_dir=None):
     if isinstance(run, str):
@@ -31,6 +33,8 @@ def plot_correlation_graph(run, feature_names=None, x_axis_labels=None, plots_pe
 
     fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row_, figsize=(6*plots_per_row, 6*num_rows))
 
+    letters = iter(string.ascii_uppercase)
+
     for i in range(len(axes.flatten())):  # Exclude the last column which is the dependent variable
         
         row = i // plots_per_row_
@@ -50,11 +54,12 @@ def plot_correlation_graph(run, feature_names=None, x_axis_labels=None, plots_pe
         sns.boxplot(x=feature_dataset.target, y=col, data=selected_dataframe, ax=selected_ax, fill=False)
         selected_ax.set_title(f'{col}')
 
-        selected_ax.set_yticklabels(selected_ax.get_ylabel(), fontsize=10)
-
                 # Set x-axis labels if provided
         if x_axis_labels is not None:
-            selected_ax.set_xticklabels(x_axis_labels, fontsize=10)
+            selected_ax.set_xticklabels(x_axis_labels)
+
+        letter = next(letters)
+        selected_ax.text(0.05, 0.95, f"({letter})", transform=selected_ax.transAxes, fontsize=12, va='top', ha='left')
 
     plt.tight_layout()
     if save_dir is None:

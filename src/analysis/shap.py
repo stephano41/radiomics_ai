@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import string
 import pandas as pd
 import shap
 import mlflow
@@ -265,9 +265,10 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
         plt.barh(
             y_pos + ypos_offset, values[i, feature_inds],
             bar_width, align='center',
-            color=[colors.blue_rgb if values[i, feature_inds[j]] <= 0 else colors.red_rgb for j in range(len(y_pos))],
-            hatch=patterns[i], edgecolor=(1, 1, 1, 0.8),
-            label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
+            hatch=patterns[i],
+            label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]",
+            color='lightblue',
+            edgecolor="black"
         )
 
     # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
@@ -289,14 +290,14 @@ def custom_shap_bar(shap_values, max_display=10, order=Explanation.abs, clusteri
                 plt.text(
                     values[i, ind] - (5 / 72) * bbox_to_xscale, y_pos[j] + ypos_offset,
                     format_value(values[i, ind], '%+.2e'),
-                    horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
+                    horizontalalignment='right', verticalalignment='center',
                     fontsize=12
                 )
             else:
                 plt.text(
                     values[i, ind] + (5 / 72) * bbox_to_xscale, y_pos[j] + ypos_offset,
                     format_value(values[i, ind], '%+.2e'),
-                    horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
+                    horizontalalignment='left', verticalalignment='center',
                     fontsize=12
                 )
 
@@ -423,7 +424,7 @@ def summate_shap_bar(shap_values, feature_substrings, max_display=10, save_dir=N
     values = [x[1] for x in sorted_feature_values]
 
     plt.close('all')
-    plt.barh(sorted_categories, values)
+    plt.barh(sorted_categories, values, color='lightblue', edgecolor="black")
 
     for index, category in enumerate(sorted_categories):
         plt.text(result_feature_values[category], index,
@@ -454,6 +455,8 @@ def plot_dependence_scatter_plot(shap_values, n_features, save_dir=None, plots_p
 
     fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row_, figsize=(6*plots_per_row, 6*num_rows))
 
+    letters = iter(string.ascii_uppercase)
+
     for idx in range(len(axes.flatten())):
         row = idx // plots_per_row_
         col_idx = idx % plots_per_row_
@@ -472,8 +475,11 @@ def plot_dependence_scatter_plot(shap_values, n_features, save_dir=None, plots_p
         xlabel = selected_ax.get_xlabel()
         ylabel = selected_ax.get_ylabel()
 
-        plt.xlabel(xlabel, fontsize=10)  # Adjust fontsize as needed
-        plt.ylabel(ylabel, fontsize=10)
+        selected_ax.set_xlabel(xlabel, fontsize=10)
+        selected_ax.set_ylabel(ylabel, fontsize=10)
+
+        letter = next(letters)
+        selected_ax.text(0.05, 0.95, f"({letter})", transform=selected_ax.transAxes, fontsize=12, va='top', ha='left')
     
     if save_dir is not None:
         fig.savefig(f"{save_dir}/dependence_plot_feature.png", dpi=1200, bbox_inches='tight')

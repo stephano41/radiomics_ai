@@ -6,12 +6,19 @@ from src.analysis.shap import get_shap_values, plot_shap_bar, summate_shap_bar, 
 from src.analysis.calibration_curve import plot_calibration_curve
 from src.analysis.correlation_plot import plot_correlation_graph
 from src.analysis.decision_curve import plot_net_benefit
+# from src.evaluation.roc_curve import plot_roc_curve_with_ci
 import os
+from matplotlib import rcParams
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
 
 def run_analysis(config):
+    # rcParams['font.family'] = 'Arial'
+    plt.style.use('seaborn-v0_8-colorblind')
+    plt.rcParams.update({'font.size': 10})
+
     if config.get('run_id', None) is not None:
         # convert this to the same format
         run = pd.Series(dict(mlflow.get_run(config.run_id).info))
@@ -32,7 +39,7 @@ def run_analysis(config):
     plot_shap_bar(shap_values, max_display=200,
                   save_dir=os.path.join(output_dir, 'shap_bar_plot_overview.png'))
 
-    plot_dependence_scatter_plot(shap_values, 10, save_dir=output_dir)
+    plot_dependence_scatter_plot(shap_values, 10, save_dir=output_dir, plots_per_row=3)
 
     if config.analysis.get('image_modalities', None) is not None:
         summate_shap_bar(shap_values, config.analysis.image_modalities,
@@ -47,6 +54,9 @@ def run_analysis(config):
             # only do this if binary cases
             plot_calibration_curve(run, save_dir=os.path.join(output_dir, 'calibration_curve.png'))
 
-            plot_net_benefit(run, save_dir=os.path.join(output_dir, 'decision_curve.png'), estimator_name='model')
+        plot_net_benefit(run, save_dir=os.path.join(output_dir, 'decision_curve.png'), estimator_name='model')
+
+        # if config.get('plot_roc_auc') is not None:
+        #     plot_roc_curve_with_ci(run, os.path.join(output_dir,'roc_curve.png'))
     else:
         logger.warn('No bootstrap scores found, not running analysis dependent on it')

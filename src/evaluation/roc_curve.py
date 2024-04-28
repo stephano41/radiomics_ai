@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def plot_roc_curve_with_ci(data_dict):
+def plot_roc_curve_with_ci(data_dict, save_dir=None):
     """
     Plot ROC curve with visualized confidence interval.
 
@@ -80,4 +80,8 @@ def plot_roc_curve_with_ci(data_dict):
     plt.legend(loc='lower right')
     plt.grid(True)
     plt.tight_layout()
-    return plt.gcf(), {'optimal_threshold':mean_threshold[idx], 'optimal_sensitivity':mean_tpr[idx], 'optimal_specificity': 1-mean_fpr[idx]}
+    current_fig = plt.gcf()
+    if save_dir is not None:
+        current_fig.savefig(save_dir, dpi=1200, bbox_inches='tight')
+
+    return current_fig, {'optimal_threshold':mean_threshold[idx], 'optimal_sensitivity':mean_tpr[idx], 'optimal_specificity': 1-mean_fpr[idx]}

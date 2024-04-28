@@ -72,10 +72,10 @@ class Trainer(OrigTrainer):
                 y_val,
                 _,
         ) in data.iter_training():
-            X_train = X_train.to_numpy(np.float32)
-            y_train = y_train.to_numpy()
-            X_val = X_val.to_numpy(np.float32)
-            y_val = y_val.to_numpy()
+            # X_train = X_train.to_numpy(np.float32)
+            # y_train = y_train.to_numpy()
+            # X_val = X_val.to_numpy(np.float32)
+            # y_val = y_val.to_numpy()
             
             # X_train[np.isinf(X_train)] = 0
             # X_val[np.isinf(X_val)] = 0
@@ -85,8 +85,8 @@ class Trainer(OrigTrainer):
             try:
                 model.fit(X_train, y_train)
             except ValueError as e:
-                log.error(f"Training {model.name} failed. \n{e}")
-                return np.nan
+                log.error(f"Training {model.name} failed. \n{trial.params}")
+                raise e
             try:
                 y_pred = model.predict_proba(X_val)
             except ValueError as e:
@@ -95,10 +95,10 @@ class Trainer(OrigTrainer):
 
             try:
                 auc_val = self.get_auc(y_val, y_pred)
-                sensitivity_val = sensitivity_scorer(model, y_val, y_pred)
+                sensitivity_val = sensitivity_scorer(model, X_val, y_val)
             except ValueError as e:
-                log.error(f"Evaluating {model.name} failed on auc. \n{e}")
-                return np.nan
+                log.error(f"Evaluating {model.name} failed on auc. \n{trial.params}")
+                raise e
 
             aucs.append(auc_val)
             sensitivities.append(sensitivity_val)
@@ -173,7 +173,7 @@ class Trainer(OrigTrainer):
 
     
     def get_best_trial(self, study):
-        study_df = study.trials_dataframe(attrs=('number', 'user_attrs_AUC_val', 'user_attrs_sensitivity_val'))
+        study_df = study.trials_dataframe(attrs=('number', 'user_attrs'))
         unique_auc = np.unique(study_df['user_attrs_AUC_val'])
         cutoff = unique_auc[-int(len(unique_auc)*0.025)]
 
@@ -181,8 +181,11 @@ class Trainer(OrigTrainer):
 
         max_sensitivity_row = selected_trials[selected_trials['user_attrs_sensitivity_val'] == selected_trials['user_attrs_sensitivity_val'].max()]
 
+        best_trial_number = max_sensitivity_row['number'].iloc[0] 
+
         for trial in study.trials:
-            if trial.number == max_sensitivity_row['number']:
+            if trial.number == best_trial_number:
+                log.info(f'Best trial was number {best_trial_number}, {trial.params} with AUC: {trial.user_attrs["AUC_val"]} and sensitivity: {trial.user_attrs["sensitivity_val"]} ')
                 return trial
 
 
