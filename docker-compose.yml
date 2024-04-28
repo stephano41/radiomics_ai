@@ -18,13 +18,13 @@ services:
             tty: true
             stdin_open: true
             shm_size: 10gb
-            deploy:
-              resources:
-                reservations:
-                  devices:
-                    - driver: nvidia
-                      count: 1
-                      capabilities: [gpu]
+            # deploy:
+            #   resources:
+            #     reservations:
+            #       devices:
+            #         - driver: nvidia
+            #           count: 1
+            #           capabilities: [gpu]
     mlflow:
         <<: *default
         container_name: mri_sarcoma_ai_mlflow

@@ -73,10 +73,11 @@ def plot_roc_curve_with_ci(data_dict):
     plt.plot([0, 1], [0, 1], linestyle='--', color='gray', lw=2, label='Random')
     plt.axis('scaled')
     plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
+    plt.ylim([0.0, 1.0])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('ROC Curve with Confidence Interval')
     plt.legend(loc='lower right')
     plt.grid(True)
+    plt.tight_layout()
     return plt.gcf(), {'optimal_threshold':mean_threshold[idx], 'optimal_sensitivity':mean_tpr[idx], 'optimal_specificity': 1-mean_fpr[idx]}

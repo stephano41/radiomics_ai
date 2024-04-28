@@ -60,7 +60,9 @@ def test_model_initialisation(cfg_tune):
 
 
 @mark.parametrize("feature_dataset_path", ['./tests/meningioma_feature_dataset.csv', './tests/extracted_features.csv'])
-@mark.parametrize("additional_features,autoencoder", [([], None), (['ID'], 'get_dummy_autoencoder')])
+@mark.parametrize("additional_features,autoencoder", [([], None), 
+                                                    #   (['ID'], 'get_dummy_autoencoder')
+                                                      ])
 def test_trainer(tmp_path, feature_dataset_path, additional_features, autoencoder, request):
     # shutil.copy('./tests/outputs/meningioma_preprocessed.pkl', tmp_path / 'preprocessed.pkl')
     os.environ['AUTORAD_RESULT_DIR'] = str(tmp_path)

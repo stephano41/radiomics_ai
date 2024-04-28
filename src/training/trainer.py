@@ -11,9 +11,11 @@ from autorad.models import MLClassifier
 from autorad.training import Trainer as OrigTrainer, train_utils
 from autorad.utils import mlflow_utils
 from optuna.trial import Trial
+from sklearn.metrics import get_scorer
 from src.metrics import roc_auc, pr_auc
 from src.preprocessing import Preprocessor
 log = logging.getLogger(__name__)
+
 
 
 class Trainer(OrigTrainer):
@@ -61,6 +63,7 @@ class Trainer(OrigTrainer):
         model = train_utils.get_model_by_name(model_name, self.models)
         model = self.set_optuna_params(model, trial)
         aucs = []
+        sensitivities = []
         for (
                 X_train,
                 y_train,
@@ -74,8 +77,10 @@ class Trainer(OrigTrainer):
             X_val = X_val.to_numpy(np.float32)
             y_val = y_val.to_numpy()
             
-            X_train[np.isinf(X_train)] = 0
-            X_val[np.isinf(X_val)] = 0
+            # X_train[np.isinf(X_train)] = 0
+            # X_val[np.isinf(X_val)] = 0
+
+            sensitivity_scorer = get_scorer('recall')
 
             try:
                 model.fit(X_train, y_train)
@@ -90,18 +95,23 @@ class Trainer(OrigTrainer):
 
             try:
                 auc_val = self.get_auc(y_val, y_pred)
+                sensitivity_val = sensitivity_scorer(model, y_val, y_pred)
             except ValueError as e:
                 log.error(f"Evaluating {model.name} failed on auc. \n{e}")
                 return np.nan
 
             aucs.append(auc_val)
+            sensitivities.append(sensitivity_val)
         model.fit(
             data.X.train, data.y.train
         )  # refit on the whole training set (important for cross-validation)
         auc_val = float(np.nanmean(aucs))
+        sensitivity_mean = float(np.nanmean(sensitivities))
+        
         trial.set_user_attr("AUC_val", auc_val)
         trial.set_user_attr("model", model)
         trial.set_user_attr("data_preprocessed", data)
+        trial.set_user_attr("sensitivity_val", sensitivity_mean)
 
         return auc_val
 
@@ -146,7 +156,7 @@ class Trainer(OrigTrainer):
             'oversampling_method': oversampling
         })
         preprocessor = Preprocessor(**preprocessor_kwargs)
-        preprocessor.fit_transform_data(self.dataset.data)
+        preprocessor._fit_transform(self.dataset.X, self.dataset.y)
         if "select" in preprocessor.pipeline.named_steps:
             selected_features = preprocessor.pipeline[
                 "select"
@@ -160,6 +170,41 @@ class Trainer(OrigTrainer):
             )
 
         mlflow.sklearn.log_model(preprocessor, "preprocessor")
+
+    
+    def get_best_trial(self, study):
+        study_df = study.trials_dataframe(attrs=('number', 'user_attrs_AUC_val', 'user_attrs_sensitivity_val'))
+        unique_auc = np.unique(study_df['user_attrs_AUC_val'])
+        cutoff = unique_auc[-int(len(unique_auc)*0.025)]
+
+        selected_trials = study_df[study_df['user_attrs_AUC_val'] >= cutoff]
+
+        max_sensitivity_row = selected_trials[selected_trials['user_attrs_sensitivity_val'] == selected_trials['user_attrs_sensitivity_val'].max()]
+
+        for trial in study.trials:
+            if trial.number == max_sensitivity_row['number']:
+                return trial
+
+
+    def log_to_mlflow(self, study):
+        best_trial = self.get_best_trial(study)
+        best_auc = best_trial.user_attrs["AUC_val"]
+        mlflow.log_metric("AUC_val", best_auc)
+
+        train_utils.log_optuna(study)
+
+        best_model = best_trial.user_attrs["model"]
+        best_model.save_to_mlflow()
+
+        best_params = best_trial.params
+        self.save_params(best_params)
+        self.save_best_preprocessor(best_params)
+        self.copy_extraction_artifacts()
+        train_utils.log_dataset(self.dataset)
+        train_utils.log_splits(self.dataset.splits)
+
+        data_preprocessed = best_trial.user_attrs["data_preprocessed"]
+        self.log_train_auc(best_model, data_preprocessed)
 
 # def get_model_by_name(name, models):
 #     for model in models:
