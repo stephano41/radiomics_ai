@@ -10,6 +10,17 @@ name: meningioma+autoencoder
 feature_dataset:
      additional_features: ['ID']
 
+preprocessing:
+    feature_selection_methods:
+        - anova
+        - lasso
+        - linear_svc
+        - tree
+        - {_method_: sf, direction: forward, n_jobs: 10, tol: 0.05, n_features_to_select: Null}
+        - rfe
+        - mrmr
+        - pca
+
 # add in deep features as image modality
 analysis:
     image_modalities: ['adc$', 't2$', 'flair$', 't1$', 't1ce$', 'dl_feature']

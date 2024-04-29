@@ -25,7 +25,7 @@ Accepts a `run_id` argument to analyse a specific run, or it'll analyse the last
 </details>
 <details>
 <summary>Analysis pipeline</summary>
-<code>docker compose run app python main.py experiments=meningioma pipeline._target_=src.pipeline.run_analysis
+<code>docker compose run app python main.py experiments=meningioma pipelines=analysis
 </code><br>
 Accepts a run_id argument to analyze a specific run, or it'll analyze the last run of the experiment name in the config.
 </details>

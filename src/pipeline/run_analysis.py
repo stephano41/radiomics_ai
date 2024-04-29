@@ -10,6 +10,7 @@ from src.analysis.decision_curve import plot_net_benefit
 import os
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
+import pickle
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,18 @@ def run_analysis(config):
         dataset_artifacts = load_dataset_artifacts(compare_run)
         shap_values, _, _ = get_shap_values(run, dataset_artifacts['df'], dataset_artifacts['splits'])
     else:
-        shap_values, _, _ = get_shap_values(run)
+        shap_values_file = os.path.join(output_dir, 'shap_values.pkl')
+        if os.path.exists(shap_values_file):
+            # If the file exists, load shap_values from it
+            with open(shap_values_file, 'rb') as f:
+                shap_values = pickle.load(f)
+        else:
+            # If the file doesn't exist, generate shap_values using get_shap_values
+            shap_values, _, _ = get_shap_values(run)
+            
+            # Save shap_values to the output directory
+            with open(shap_values_file, 'wb') as f:
+                pickle.dump(shap_values, f)
 
     plot_shap_bar(shap_values, max_display=200,
                   save_dir=os.path.join(output_dir, 'shap_bar_plot_overview.png'))
