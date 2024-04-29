@@ -47,7 +47,7 @@ def run_analysis(config):
     summate_shap_bar(shap_values, config.analysis.feature_classes,
                      save_dir=os.path.join(output_dir, 'shap_bar_feature_classe.png'))
   
-    plot_correlation_graph(run, feature_names=shap_values.feature_names, plots_per_row=2, save_dir=os.path.join(output_dir, 'feature_correlation_plot.png'), x_axis_labels=config.labels)
+    plot_correlation_graph(run, feature_names=shap_values.feature_names, plots_per_row=3, save_dir=os.path.join(output_dir, 'feature_correlation_plot.png'), x_axis_labels=config.labels)
 
     if 'bootstrap_scores.pkl' in os.listdir(output_dir):
         if config.multi_class == 'raise':

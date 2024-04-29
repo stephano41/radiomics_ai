@@ -5,6 +5,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import mlflow
 import string
+import logging
+import pandas as pd
+logger = logging.getLogger(__name__)
 
 
 def plot_correlation_graph(run, feature_names=None, x_axis_labels=None, plots_per_row=3, save_dir=None):
@@ -21,7 +24,12 @@ def plot_correlation_graph(run, feature_names=None, x_axis_labels=None, plots_pe
                                             dataset_config=dataset_artifacts['dataset_config'],
                                             splits=dataset_artifacts['splits'])
 
-    selected_dataframe = feature_dataset.df[feature_names + [feature_dataset.target]]
+    valid_feature_names = [feature for feature in feature_names if feature in feature_dataset.df.columns]
+
+    if len(valid_feature_names) != len(feature_names):
+        logger.warn(f'Only found {valid_feature_names} in dataframe out of {feature_names}')
+    
+    selected_dataframe = feature_dataset.df[valid_feature_names + [feature_dataset.target]]
 
     num_vars = len(selected_dataframe.columns) - 1  # Exclude the dependent variable
 
