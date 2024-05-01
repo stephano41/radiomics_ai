@@ -7,13 +7,14 @@ import numpy as np
 import os
 from .hosmer_lemeshow import hosmer_lemeshow
 import logging
+from src.utils.inference import get_run_info_as_series
 
 logger = logging.getLogger(__name__)
 
 
 def plot_calibration_curve(run, save_dir=None):
     if isinstance(run, str):
-        run = pd.Series(dict(mlflow.get_run(run).info))
+        run = get_run_info_as_series(run)
 
     artifact_uri = run.artifact_uri.removeprefix('file://')
 

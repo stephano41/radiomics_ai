@@ -6,7 +6,8 @@ from torchio import SubjectsDataset
 from skorch.dataset import Dataset
 import torchio as tio
 import numpy as np
-from src.utils.prepro_utils import get_multi_paths_with_separate_folder_per_case
+from src.utils.dataset import get_multi_paths_with_separate_folder_per_case
+
 
 #
 # class SkorchSubjectsDataset(SubjectsDataset):

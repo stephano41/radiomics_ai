@@ -1,16 +1,15 @@
 import pickle
-import pandas as pd
-import mlflow
 import numpy as np
 from statkit.decision import overall_net_benefit, net_benefit_action, NetBenefitDisplay, net_benefit, net_benefit_oracle
 import os
 import matplotlib.pyplot as plt
+from src.utils.inference import get_run_info_as_series
 
 
 
 def plot_net_benefit(run, save_dir=None, thresholds=100, estimator_name=None, benefit_type='action'):
     if isinstance(run, str):
-        run = pd.Series(dict(mlflow.get_run(run).info))
+        run = get_run_info_as_series(run)
 
     artifact_uri = run.artifact_uri.removeprefix('file://')
 

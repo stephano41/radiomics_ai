@@ -14,10 +14,10 @@ import logging
 import pickle
 import pandas as pd
 from src.evaluation import Bootstrap
-from src.pipeline.pipeline_components import get_multimodal_feature_dataset, split_feature_dataset
+from src.utils.pipeline import get_multimodal_feature_dataset, split_feature_dataset
 from src.preprocessing import run_auto_preprocessing
 from src.training import Trainer
-from src.utils.infer_utils import get_pipeline_from_last_run
+from src.utils.inference import get_pipeline_from_last_run
 
 
 logger = logging.getLogger(__name__)

@@ -1,23 +1,20 @@
 from __future__ import annotations
 
 from typing import Union, List, Dict
-import SimpleITK as sitk
 import numpy as np
 from pydicom import dcmread
 import os
 from pathlib import Path
-import dicom2nifti
 import pandas as pd
 import re
 import logging
 from tqdm import tqdm
 import SimpleITK as sitk
 
-
-
 logger = logging.getLogger(__name__)
 
-def get_dicomdir_meta(dicomdir_path: str, dicom_meta_params: Dict[str, str] = None)-> pd.DataFrame:
+
+def get_dicomdir_meta(dicomdir_path: str, dicom_meta_params: Dict[str, str] = None) -> pd.DataFrame:
     """
     Extracts metadata from DICOMDIR file.
 
@@ -39,7 +36,7 @@ def get_dicomdir_meta(dicomdir_path: str, dicom_meta_params: Dict[str, str] = No
 
             instance_path = Path(dicom_dir.filename).parent / os.path.join(*instance.ReferencedFileID)
             series_path = instance_path.parent
-            if not os.path.exists(series_path/'SeriesHeader.zip'):
+            if not os.path.exists(series_path / 'SeriesHeader.zip'):
                 logger.warning(f"{series_path} had no SeriesHeader.zip file, assuming is a localiser so skipping")
                 break
             instance_meta = get_dicom_meta(str(instance_path), dicom_meta_params)
@@ -52,7 +49,8 @@ def get_dicomdir_meta(dicomdir_path: str, dicom_meta_params: Dict[str, str] = No
 
 def dicom_meta2nii(study_meta: pd.DataFrame, output_folder: str,
                    series_description_filter: Union[None, List[str]] = None,
-                   reorient: bool = False, codependent: bool = False, codependent_tolerance: float = 0.1, patient_id='')-> pd.DataFrame:
+                   reorient: bool = False, codependent: bool = False, codependent_tolerance: float = 0.1,
+                   patient_id='') -> pd.DataFrame:
     """
     Converts DICOM metadata to NIfTI format.
 
@@ -86,9 +84,10 @@ def dicom_meta2nii(study_meta: pd.DataFrame, output_folder: str,
                                                                            np.linalg.norm(
                                                                                np.array(x.split("\\")).astype(
                                                                                    float) - patient_image_position))
-            under_tolerance_row = match_rows[euclidean_distances/3.0 <= codependent_tolerance]
+            under_tolerance_row = match_rows[euclidean_distances / 3.0 <= codependent_tolerance]
             if under_tolerance_row.empty:
-                raise ValueError(f"No rows found under tolerance of {codependent_tolerance} for {match_rows}, and euclidean_distance averages {euclidean_distances/3.0}")
+                raise ValueError(
+                    f"No rows found under tolerance of {codependent_tolerance} for {match_rows}, and euclidean_distance averages {euclidean_distances / 3.0}")
             match_row = under_tolerance_row.iloc[0]
         else:
             match_row = match_rows.iloc[0]
@@ -99,16 +98,16 @@ def dicom_meta2nii(study_meta: pd.DataFrame, output_folder: str,
             else:
                 logger.warning(f"No ImagePositionPatient, can only use AcquisitionDateTime for {match_row}")
 
-                patient_image_position=None
+                patient_image_position = None
 
         series_path = match_row['series_path']
         series_name = re.sub(r'[^\w\s]', '', filter)
         dicom_series_to_nifti(original_dicom_directory=series_path,
-                                                        output_file=os.path.join(output_folder,
-                                                                                 # f"{patient_id}_{series_name}.nii.gz"),
-                                                        f"{patient_id}_{series_name}.nii.gz"),
+                              output_file=os.path.join(output_folder,
+                                                       # f"{patient_id}_{series_name}.nii.gz"),
+                                                       f"{patient_id}_{series_name}.nii.gz"),
 
-        # reorient_nifti=reorient
+                              # reorient_nifti=reorient
                               )
 
         filtered_df.append(match_row)
@@ -116,7 +115,7 @@ def dicom_meta2nii(study_meta: pd.DataFrame, output_folder: str,
     return pd.concat(filtered_df, axis=1).T.reset_index(drop=True)
 
 
-def dicom_series_to_nifti(original_dicom_directory,output_file):
+def dicom_series_to_nifti(original_dicom_directory, output_file):
     reader = sitk.ImageSeriesReader()
     dicom_names = reader.GetGDCMSeriesFileNames(original_dicom_directory)
     reader.SetFileNames(dicom_names)
@@ -174,7 +173,7 @@ def get_dicom_meta(instance_path: str, dicom_meta_params: Dict[str, str] = None)
             meta[k] = (reader.GetMetaData(v)).strip()
         else:
             logger.warning(f'missing data key ({k}): {v} in {reader.GetFileName()}')
-            meta[k]=""
+            meta[k] = ""
 
     return meta
 

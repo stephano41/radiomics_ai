@@ -1,6 +1,6 @@
 import torch
-from src.dataset.visualisation import plot_slices
-from src.pipeline.pipeline_components import get_multimodal_feature_dataset
+from src.utils.dataset import plot_slices
+from src.utils.pipeline import get_multimodal_feature_dataset
 import pandas as pd
 import numpy as np
 import torchio as tio

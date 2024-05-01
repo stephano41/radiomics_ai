@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt, cm
 from numba.types import itertools
 from omegaconf import OmegaConf
 import numpy as np
-from src.pipeline.pipeline_components import get_multimodal_feature_dataset
+from src.utils.pipeline import get_multimodal_feature_dataset
 
 
 def optimise_num_workers(config):

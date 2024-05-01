@@ -1,5 +1,4 @@
 from __future__ import annotations
-import string
 import pandas as pd
 import shap
 import mlflow
@@ -9,12 +8,9 @@ from autorad.inference import infer_utils
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
-import os
-from collections import defaultdict
 from shap import Cohorts, Explanation
 from shap.utils import format_value, ordinal_str
 from shap.utils._exceptions import DimensionError
-from shap.plots import colors
 from shap.plots._labels import labels
 from shap.plots._utils import (
     convert_ordering,
@@ -24,11 +20,12 @@ from shap.plots._utils import (
     sort_inds,
 )
 import string
+from src.utils.inference import get_run_info_as_series
 
 
 def get_shap_values(run: str | pd.Series, existing_feature_df=None, existing_splits=None):
     if isinstance(run, str):
-        run = pd.Series(dict(mlflow.get_run(run).info))
+        run = get_run_info_as_series(run)
 
     artifact_uri = run.artifact_uri
     model = MLClassifier.load_from_mlflow(f"{artifact_uri}/model")

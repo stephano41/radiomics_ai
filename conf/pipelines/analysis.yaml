@@ -2,7 +2,7 @@
 run_id: Null
 
 pipeline:
-  _target_: src.pipeline.run_analysis
+  _target_: src.pipeline.analyse_run
 
 defaults:
   - main_pipeline.yaml

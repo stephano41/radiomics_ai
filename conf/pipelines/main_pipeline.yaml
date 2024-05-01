@@ -1,7 +1,7 @@
 # @package _global_
 
 pipeline:
-  _target_: src.pipeline.tune_pipeline
+  _target_: src.pipeline.full_ml_cycle
 
 # ovr doesn't seem to work
 multi_class: raise
