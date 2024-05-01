@@ -8,7 +8,7 @@ from src.analysis.correlation_plot import plot_correlation_graph
 from src.analysis.decision_curve import plot_net_benefit
 # from src.evaluation.roc_curve import plot_roc_curve_with_ci
 import os
-from matplotlib import rcParams
+import pandas as pd
 import matplotlib.pyplot as plt
 import pickle
 
@@ -48,10 +48,12 @@ def run_analysis(config):
             with open(shap_values_file, 'wb') as f:
                 pickle.dump(shap_values, f)
 
+    pd.DataFrame(shap_values.values, columns = shap_values.feature_names).to_csv(os.path.join(output_dir, 'shap_values.csv'))
+
     plot_shap_bar(shap_values, max_display=200,
                   save_dir=os.path.join(output_dir, 'shap_bar_plot_overview.png'))
 
-    plot_dependence_scatter_plot(shap_values, 10, save_dir=output_dir, plots_per_row=3)
+    plot_dependence_scatter_plot(shap_values, 12, save_dir=output_dir, plots_per_row=3)
 
     if config.analysis.get('image_modalities', None) is not None:
         summate_shap_bar(shap_values, config.analysis.image_modalities,

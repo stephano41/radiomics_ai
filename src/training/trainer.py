@@ -72,13 +72,6 @@ class Trainer(OrigTrainer):
                 y_val,
                 _,
         ) in data.iter_training():
-            # X_train = X_train.to_numpy(np.float32)
-            # y_train = y_train.to_numpy()
-            # X_val = X_val.to_numpy(np.float32)
-            # y_val = y_val.to_numpy()
-            
-            # X_train[np.isinf(X_train)] = 0
-            # X_val[np.isinf(X_val)] = 0
 
             sensitivity_scorer = get_scorer('recall')
 
@@ -109,6 +102,7 @@ class Trainer(OrigTrainer):
         sensitivity_mean = float(np.nanmean(sensitivities))
         
         trial.set_user_attr("AUC_val", auc_val)
+        trial.set_user_attr("rsd_AUC_val", float(np.nanstd(aucs)/auc_val))
         trial.set_user_attr("model", model)
         trial.set_user_attr("data_preprocessed", data)
         trial.set_user_attr("sensitivity_val", sensitivity_mean)
@@ -179,13 +173,13 @@ class Trainer(OrigTrainer):
 
         selected_trials = study_df[study_df['user_attrs_AUC_val'] >= cutoff]
 
-        max_sensitivity_row = selected_trials[selected_trials['user_attrs_sensitivity_val'] == selected_trials['user_attrs_sensitivity_val'].max()]
+        min_rsd_row = selected_trials[selected_trials['user_attrs_rsd_AUC_val'] == selected_trials['user_attrs_rsd_AUC_val'].min()]
 
-        best_trial_number = max_sensitivity_row['number'].iloc[0] 
+        best_trial_number = min_rsd_row['number'].iloc[0] 
 
         for trial in study.trials:
             if trial.number == best_trial_number:
-                log.info(f'Best trial was number {best_trial_number}, {trial.params} with AUC: {trial.user_attrs["AUC_val"]} and sensitivity: {trial.user_attrs["sensitivity_val"]} ')
+                log.info(f'Best trial was number {best_trial_number}, {trial.params} with AUC: {trial.user_attrs["AUC_val"]} and relative standard deviation: {trial.user_attrs["rsd_AUC_val"]} ')
                 return trial
 
 
@@ -209,26 +203,3 @@ class Trainer(OrigTrainer):
         data_preprocessed = best_trial.user_attrs["data_preprocessed"]
         self.log_train_auc(best_model, data_preprocessed)
 
-# def get_model_by_name(name, models):
-#     for model in models:
-#         if model.name == name:
-#             return MLClassifier(type(model.model)(**model.model.get_params()), name, model.params)
-
-# import tempfile
-# from optuna.study import Study
-# import optuna
-# from pathlib import Path
-# import matplotlib.pyplot as plt
-
-# def log_optuna(study: Study):
-#     with tempfile.TemporaryDirectory() as tmp_dir:
-#         save_dir = Path(tmp_dir) / "hyperparameter_study"
-#         save_dir.mkdir(exist_ok=True)
-#         study.trials_dataframe().to_csv(save_dir / "study_df.csv")
-#         mlflow.log_artifacts(str(save_dir), "hyperparameter_study")
-    
-#     optimisation_history_plot = optuna.visualization.plot_optimization_history(study)
-#     mlflow.log_figure(optimisation_history_plot,'hyperparameter_study/optimisation_history.html')
-
-#     parallel_coordinate_plot = optuna.visualization.plot_parallel_coordinate(study, params=['oversampling_method', 'feature_selection_method','model'])
-#     mlflow.log_figure(parallel_coordinate_plot,'hyperparameter_study/parallel_coordinate.html')

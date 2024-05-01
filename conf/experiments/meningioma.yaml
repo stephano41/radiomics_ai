@@ -17,12 +17,12 @@ bootstrap:
     iters: 500
 
 optimizer:
-    n_trials: 200
+    n_trials: 1000
 
-models:
-  - {_method_: Random Forest, class_weight: {0: 1, 1: 5}}
-  - {_method_: SVM, class_weight: {0: 1, 1: 5}}
-  - {_method_: Catboost, class_weights: {0: 1, 1: 5}}
+# models:
+#   - {_method_: Random Forest, class_weight: {0: 1, 1: 5}}
+#   - {_method_: SVM, class_weight: {0: 1, 1: 5}}
+#   - {_method_: Catboost, class_weights: {0: 1, 1: 5}}
 
 preprocessing:
     feature_selection_methods:
@@ -35,6 +35,10 @@ preprocessing:
         - mrmr
         - pca
     feature_first: false
+    oversampling_methods:
+        - SMOTETomek
+        - SMOTEENN
+        - SMOTE
 
 analysis:
     image_modalities: ['adc$', 't2$', 'flair$', 't1$', 't1ce$']

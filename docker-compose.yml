@@ -1,41 +1,39 @@
-version: '3'
 services:
     app:
         build:
             context: .
             dockerfile: Dockerfile
         <<: &default
-            container_name: mri_sarcoma_ai
-            image: mri_sarcoma_ai
+            container_name: radiomics_ai
+            image: radiomics_ai
             volumes:
                 - ./:/opt/project/
             environment:
                 - AUTORAD_RESULT_DIR=./outputs
                 - HYDRA_FULL_ERROR=1
                 - TZ=Australia/Adelaide
-                - WANDB_API_KEY=${WANDB_API_KEY}
                 - ENABLE_AUTORAD_LOGGING=0
             tty: true
             stdin_open: true
-            shm_size: 10gb
-            # deploy:
-            #   resources:
-            #     reservations:
-            #       devices:
-            #         - driver: nvidia
-            #           count: 1
-            #           capabilities: [gpu]
+            shm_size: 8gb
+            deploy:
+              resources:
+                reservations:
+                  devices:
+                    - driver: nvidia
+                      count: 1
+                      capabilities: [gpu]
     mlflow:
         <<: *default
-        container_name: mri_sarcoma_ai_mlflow
+        container_name: radiomics_ai_mlflow
         ports:
-            - 8001:8001
-        command: mlflow ui --host=0.0.0.0 --port=8001 --backend-store-uri=./outputs/models
+            - 8000:8000
+        command: mlflow ui --host=0.0.0.0 --port=8000 --backend-store-uri=./outputs/models
 
 
     jupyter:
         <<: *default
-        container_name: mri_sarcoma_ai_notebook
+        container_name: radiomics_ai_notebook
         ports:
             - 8888:8888
         command: jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --no-browser --NotebookApp.token=eabc82b4d609af51618a78b0e93f791ff106b626a0c07ab7
