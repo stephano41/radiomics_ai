@@ -11,11 +11,11 @@ from autorad.models import MLClassifier
 from autorad.training import Trainer as OrigTrainer, train_utils
 from autorad.utils import mlflow_utils
 from optuna.trial import Trial
-from sklearn.metrics import get_scorer
+import multiprocessing as mp
 from src.metrics import roc_auc, pr_auc
 from src.preprocessing import Preprocessor
-log = logging.getLogger(__name__)
 
+log = logging.getLogger(__name__)
 
 
 class Trainer(OrigTrainer):
@@ -26,16 +26,17 @@ class Trainer(OrigTrainer):
                  multi_class: str = "raise",
                  labels=None,
                  average="macro",
-                 metric='roc_auc'
+                 metric='roc_auc',
+                 n_jobs=1
                  ):
 
         self.multi_class = multi_class
-        # self.num_classes = num_classes
+        self.n_jobs = n_jobs
 
         # self.auc_scorer = partial(roc_auc_score, average=average, multi_class=self.multi_class, labels=labels)
-        if metric=='roc_auc':
+        if metric == 'roc_auc':
             self.get_auc = partial(roc_auc, average=average, multi_class=multi_class, labels=labels)
-        elif metric=='pr_auc':
+        elif metric == 'pr_auc':
             self.get_auc = partial(pr_auc, average=average, multi_class=multi_class, labels=labels)
         else:
             raise ValueError(f'metric not implemented, got {metric}')
@@ -47,10 +48,12 @@ class Trainer(OrigTrainer):
             self,
             auto_preprocess: bool = False,
             experiment_name="model_training",
-            mlflow_start_kwargs={}
+            mlflow_start_kwargs=None
     ):
         if auto_preprocess:
             _, self._existing_preprocess_kwargs = self.get_preprocessed_pickle()
+        if mlflow_start_kwargs is None:
+            mlflow_start_kwargs = {}
         super().run(auto_preprocess, experiment_name, mlflow_start_kwargs)
 
     def _objective(self, trial: Trial, auto_preprocess=False) -> float:
@@ -62,50 +65,39 @@ class Trainer(OrigTrainer):
         )
         model = train_utils.get_model_by_name(model_name, self.models)
         model = self.set_optuna_params(model, trial)
-        aucs = []
-        sensitivities = []
-        for (
-                X_train,
-                y_train,
-                _,
-                X_val,
-                y_val,
-                _,
-        ) in data.iter_training():
+        try:
+            if len(data.X.train_folds) > self.n_jobs:
+                with mp.Pool(processes=self.n_jobs) as pool:
+                    aucs = pool.imap(self._fit_and_evaluate, [(model, X_train, y_train, X_val, y_val) for
+                                                              X_train, y_train, _, X_val, y_val, _ in
+                                                              data.iter_training()])
 
-            sensitivity_scorer = get_scorer('recall')
+            else:
+                aucs = []
+                for X_train, y_train, _, X_val, y_val, _ in data.iter_training():
+                    auc_val = self._fit_and_evaluate((model, X_train, y_train, X_val, y_val))
+                    aucs.append(auc_val)
+        except Exception as e:
+            log.warning(f"training {trial.params} failed")
+            raise e
 
-            try:
-                model.fit(X_train, y_train)
-            except ValueError as e:
-                log.error(f"Training {model.name} failed. \n{trial.params}")
-                raise e
-            try:
-                y_pred = model.predict_proba(X_val)
-            except ValueError as e:
-                log.error(f"training {model.name} failed. {trial.params}")
-                raise e
-
-            try:
-                auc_val = self.get_auc(y_val, y_pred)
-                sensitivity_val = sensitivity_scorer(model, X_val, y_val)
-            except ValueError as e:
-                log.error(f"Evaluating {model.name} failed on auc. \n{trial.params}")
-                raise e
-
-            aucs.append(auc_val)
-            sensitivities.append(sensitivity_val)
-        model.fit(
-            data.X.train, data.y.train
-        )  # refit on the whole training set (important for cross-validation)
         auc_val = float(np.nanmean(aucs))
-        sensitivity_mean = float(np.nanmean(sensitivities))
-        
         trial.set_user_attr("AUC_val", auc_val)
-        trial.set_user_attr("rsd_AUC_val", float(np.nanstd(aucs)/auc_val))
+        trial.set_user_attr("std_AUC_val", float(np.nanstd(aucs)))
         trial.set_user_attr("model", model)
         trial.set_user_attr("data_preprocessed", data)
-        trial.set_user_attr("sensitivity_val", sensitivity_mean)
+
+        return auc_val
+
+    def _fit_and_evaluate(self, args):
+        """Fit the model and evaluate on validation data."""
+        model, X_train, y_train, X_val, y_val = args
+
+        model.fit(X_train, y_train)
+
+        y_pred = model.predict_proba(X_val)
+
+        auc_val = self.get_auc(y_val, y_pred)
 
         return auc_val
 
@@ -165,23 +157,23 @@ class Trainer(OrigTrainer):
 
         mlflow.sklearn.log_model(preprocessor, "preprocessor")
 
-    
     def get_best_trial(self, study):
         study_df = study.trials_dataframe(attrs=('number', 'user_attrs'))
         unique_auc = np.unique(study_df['user_attrs_AUC_val'])
-        cutoff = unique_auc[-int(len(unique_auc)*0.025)]
+        cutoff = unique_auc[-int(len(unique_auc) * 0.025)]
 
         selected_trials = study_df[study_df['user_attrs_AUC_val'] >= cutoff]
 
-        min_rsd_row = selected_trials[selected_trials['user_attrs_rsd_AUC_val'] == selected_trials['user_attrs_rsd_AUC_val'].min()]
+        min_rsd_row = selected_trials[
+            selected_trials['user_attrs_std_AUC_val'] == selected_trials['user_attrs_std_AUC_val'].min()]
 
-        best_trial_number = min_rsd_row['number'].iloc[0] 
+        best_trial_number = min_rsd_row['number'].iloc[0]
 
         for trial in study.trials:
             if trial.number == best_trial_number:
-                log.info(f'Best trial was number {best_trial_number}, {trial.params} with AUC: {trial.user_attrs["AUC_val"]} and relative standard deviation: {trial.user_attrs["rsd_AUC_val"]} ')
+                log.info(
+                    f'Best trial was number {best_trial_number}, {trial.params} with AUC: {trial.user_attrs["AUC_val"]} and standard deviation: {trial.user_attrs["std_AUC_val"]} ')
                 return trial
-
 
     def log_to_mlflow(self, study):
         best_trial = self.get_best_trial(study)
@@ -202,4 +194,3 @@ class Trainer(OrigTrainer):
 
         data_preprocessed = best_trial.user_attrs["data_preprocessed"]
         self.log_train_auc(best_model, data_preprocessed)
-
