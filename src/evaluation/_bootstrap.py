@@ -9,7 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.metrics import Scorer
-from sklearn.metrics import make_scorer, roc_curve
+from sklearn.metrics import  roc_curve
 import pickle
 
 from .roc_curve import plot_roc_curve_with_ci
@@ -19,25 +19,22 @@ from .stratified_bootstrap import BootstrapGenerator
 # metrics to include: positive predictive value, negative predictive, sensitivity, specificity, AUC
 class Bootstrap:
     def __init__(self, X, Y, iters: int = 500, alpha: float = 0.95, num_processes: int = 2, method: str = '.632',
-                 stratify=False, labels=None, log_dir=None, cpus_per_process=2):
+                 stratify=False, labels=None, log_dir=None):
         if method not in [".632", ".632+", "oob"]:
             raise ValueError(f"invalid bootstrap method {method}")
 
         self.X = X
         self.Y = Y
         self.is_multiclass = len(np.unique(Y)) > 2
-
-        oob = BootstrapGenerator(n_splits=iters, stratify=stratify)
-        self.oob_splits = list(oob.split(X, Y))
-
         self.alpha = alpha
         self.num_processes = num_processes
-        self.cpus_per_process=cpus_per_process
         self.method = method
         self.log_dir = log_dir
         self.labels = labels
-
         self.scores = []
+
+        oob = BootstrapGenerator(n_splits=iters, stratify=stratify)
+        self.oob_splits = list(oob.split(X, Y))
 
         if log_dir is not None:
             self._meta_file_path = os.path.join(log_dir, 'oob_splits.pkl')
@@ -57,6 +54,21 @@ class Bootstrap:
                 # save the generator for next time
                 with open(self._meta_file_path, 'wb') as f:
                     pickle.dump(self.oob_splits, f)
+
+    def _load_or_save_splits(self):
+        meta_file_path = os.path.join(self.log_dir, 'oob_splits.pkl')
+        scores_path = os.path.join(self.log_dir, 'bootstrap_scores.pkl')
+        if os.path.exists(meta_file_path) and os.path.exists(scores_path):
+            with open(meta_file_path, 'rb') as f:
+                self.oob_splits = pickle.load(f)
+                print(f"Loaded existing bootstrap splits at {meta_file_path}")
+            with open(scores_path, 'rb') as f:
+                self.scores = pickle.load(f)
+                start_index = len(self.scores)
+            self.oob_splits = self.oob_splits[start_index:]
+        else:
+            with open(meta_file_path, 'wb') as f:
+                pickle.dump(self.oob_splits, f)
 
     def run(self, model):
         score_func = Scorer(multiclass=self.is_multiclass, labels=self.labels)
@@ -101,18 +113,11 @@ class Bootstrap:
 
     def log_scores(self, scores):
         if self.log_dir is not None:
-            with open(self._scores_path, 'wb') as f:
+            with open(os.path.join(self.log_dir, 'bootstrap_scores.pkl'), 'wb') as f:
                 pickle.dump(scores, f)
 
-    # def _one_bootstrap(self, idx, model, scoring_func):
-    #     print(idx)
-    #     time.sleep(0.5)
-    #     if not self.is_multiclass:
-    #         return np.random.random(), {'fpr': np.random.random(10), 'tpr': np.random.random(10), 'thresholds': np.random.random(10)}
-    #     return np.random.random(), None
     def _one_bootstrap(self, idx, model, scoring_func):
-        train_idx = idx[0]
-        test_idx = idx[1]
+        train_idx, test_idx = idx
         model.fit(index_array(self.X, train_idx), index_array(self.Y, train_idx))
 
         test_acc = scoring_func(model, index_array(self.X, test_idx), index_array(self.Y, test_idx))
@@ -166,15 +171,6 @@ def index_array(a, idx):
     else:
 
         return a[idx]
-
-
-def get_ci_each_col(df, alpha=0.95):
-    result = {}
-    for column in df:
-        series = df[column]
-        result[series.name] = get_ci(series.array, alpha)
-
-    return result
 
 
 def get_ci(data, alpha=0.95):

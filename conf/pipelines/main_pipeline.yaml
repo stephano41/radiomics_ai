@@ -29,6 +29,7 @@ split:
 
 trainer:
   metric: roc_auc
+  n_jobs: ${cpu_per_task}
 
 models:
   - Random Forest
@@ -66,7 +67,6 @@ optimizer:
 bootstrap:
     iters: 100
     cpus_per_process: ${cpu_per_task}
-    num_processes: ${cpu_per_task}
     labels: ${labels}
     method: '.632'
     alpha: 0.95
