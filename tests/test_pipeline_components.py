@@ -7,6 +7,23 @@ import os
 from sklearn.datasets import make_classification
 
 
+def test_get_multimodal_feature_dataset():
+    from src.utils.pipeline import get_multimodal_feature_dataset
+
+    print(os.getcwd())
+
+    feature_dataset = get_multimodal_feature_dataset(target_column='Grade',
+                                                     data_dir='./data/meningioma_data',
+                                                     image_stems=['t2', 'flair'],
+                                                     mask_stem='mask',
+                                                     label_csv_path='./data/meningioma_meta.csv',
+                                                     extraction_params='./conf/radiomic_params/meningioma_mr.yaml',
+                                                     n_jobs=-1,
+                                                     feature_df_merger={'_target_': 'src.utils.df_mergers.meningioma_df_merger'})
+
+    feature_dataset = get_multimodal_feature_dataset('Grade', existing_feature_df='./tests/meningioma_feature_dataset.csv')
+
+
 @mark.parametrize("feature_dataset_path", ['./tests/meningioma_feature_dataset.csv', './tests/extracted_features.csv'])
 @mark.parametrize("additional_features,autoencoder", [([], None), (['ID'], 'get_dummy_autoencoder')])
 def test_auto_preprocessing(tmp_path, feature_dataset_path, additional_features, autoencoder, request):

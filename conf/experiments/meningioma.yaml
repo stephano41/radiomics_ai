@@ -19,6 +19,9 @@ bootstrap:
 optimizer:
     n_trials: 1000
 
+split:
+  method: repeated_stratified_kfold_no_test
+
 # models:
 #   - {_method_: Random Forest, class_weight: {0: 1, 1: 5}}
 #   - {_method_: SVM, class_weight: {0: 1, 1: 5}}
@@ -26,19 +29,19 @@ optimizer:
 
 preprocessing:
     feature_selection_methods:
-        - anova
-        - lasso
-        - linear_svc
-        - tree
-        - {_method_: sf, direction: forward, n_jobs: 5, tol: 0.05, n_features_to_select: Null}
-        - rfe
+        # - anova
+        # - lasso
+        # - linear_svc
+        # - tree
+        # - {_method_: sf, direction: forward, n_jobs: 5, tol: 0.05, n_features_to_select: Null}
+        # - rfe
         - mrmr
-        - pca
+        # - pca
     feature_first: false
     oversampling_methods:
         - SMOTETomek
-        - SMOTEENN
-        - SMOTE
+        # - SMOTEENN
+        # - SMOTE
 
 analysis:
     image_modalities: ['adc$', 't2$', 'flair$', 't1$', 't1ce$']

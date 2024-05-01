@@ -90,7 +90,7 @@ def load_existing_features(existing_feature_path: str, target_column: str) -> Fe
     return FeatureDataset(pd.read_csv(existing_feature_path), target=target_column, ID_colname='ID')
 
 
-def extract_features(image_stems: Sequence[str, ...], paths_df: pd.DataFrame, data_dir: str, extraction_params: str,
+def extract_features(image_stems: Sequence[str], paths_df: pd.DataFrame, data_dir: str, extraction_params: str,
                      n_jobs: int) -> pd.DataFrame:
     """ Extract features for each image stem and concatenate them into a single DataFrame. """
     feature_dfs = []
@@ -123,7 +123,7 @@ def get_multimodal_feature_dataset(
         target_column: str,
         data_dir: Optional[str] = None,
         label_csv_path: Optional[str] = None,
-        image_stems: Sequence[str, ...] = ('image',),
+        image_stems: Sequence[str] = ('image',),
         mask_stem: str = 'mask',
         label_csv_encoding: Optional[str] = None,
         additional_features: Sequence[str] = None,
@@ -142,6 +142,8 @@ def get_multimodal_feature_dataset(
     all_feature_df = extract_features(image_stems, paths_df, data_dir, extraction_params, n_jobs)
     merged_feature_df = merge_labels(all_feature_df, label_csv_path, label_csv_encoding, feature_df_merger)
 
+    if additional_features is None:
+        additional_features = [] 
     return FeatureDataset(merged_feature_df, target=target_column, ID_colname='ID',
                           additional_features=additional_features)
 
