@@ -9,7 +9,8 @@ from omegaconf import OmegaConf
 
 from src.preprocessing import run_auto_preprocessing
 from src.training import Trainer
-from src.pipeline import evaluate_run, analyse_run
+from src.pipeline._evaluate_run import evaluate_run
+from src.pipeline._analyse_run import analyse_run
 from src.utils.pipeline import get_multimodal_feature_dataset, split_feature_dataset
 
 logger = logging.getLogger(__name__)
