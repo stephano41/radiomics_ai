@@ -6,7 +6,7 @@ import torch
 import logging
 from collections import OrderedDict
 from ..utils import expand_weights
-from torch.optim import AdamW
+from ..initialisations import he_init
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,8 @@ class FMCIBModel(nn.Module):
                                               ('heads1', nn.Linear(latent_var_dim, output_class, bias=True))
                                               ]))
 
+        self.apply(he_init)
+        
         if weights_path is not None:
             self.load(weights_path)
         
