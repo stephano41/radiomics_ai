@@ -17,10 +17,11 @@ bootstrap:
     iters: 500
 
 optimizer:
-    n_trials: 1000
+    n_trials: 500
 
 split:
   method: repeated_stratified_kfold_no_test
+  n_repeats: 20
 
 # models:
 #   - {_method_: Random Forest, class_weight: {0: 1, 1: 5}}
@@ -40,7 +41,7 @@ preprocessing:
     feature_first: false
     oversampling_methods:
         - SMOTETomek
-        # - SMOTEENN
+        # - BorderlineSMOTE
         # - SMOTE
 
 analysis:

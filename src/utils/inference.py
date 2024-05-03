@@ -2,6 +2,8 @@ import logging
 
 import mlflow
 import pandas as pd
+import os
+import pickle
 from autorad.inference.infer_utils import get_best_run_from_experiment_name, get_last_run_from_experiment_name
 from autorad.models.classifier import MLClassifier
 from imblearn.pipeline import Pipeline
@@ -61,3 +63,19 @@ def get_run_info_as_series(run_id):
         return run_info
     except Exception as e:
         raise Exception(f"Failed to fetch run information for run ID {run_id}: {str(e)}")
+
+
+def get_preprocessed_data(run):
+    if isinstance(run, str):
+        run = get_run_info_as_series(run)
+
+    artifact_uri = run.artifact_uri.removeprefix('file://')
+
+    preprocessed_pkl_path = os.path.join(artifact_uri, 'feature_dataset/preprocessed_data.pkl')
+    if not os.path.exists(preprocessed_pkl_path):
+        return None
+    
+    with open(preprocessed_pkl_path, 'rb') as f:
+        preprocessed_data = pickle.load(f)
+
+    return preprocessed_data

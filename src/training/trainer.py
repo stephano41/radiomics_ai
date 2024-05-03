@@ -14,7 +14,6 @@ from optuna.trial import Trial
 import multiprocessing as mp
 from src.metrics import roc_auc, pr_auc
 from src.preprocessing import Preprocessor
-
 log = logging.getLogger(__name__)
 
 
@@ -65,15 +64,17 @@ class Trainer(OrigTrainer):
         )
         model = train_utils.get_model_by_name(model_name, self.models)
         model = self.set_optuna_params(model, trial)
+        aucs = []
         try:
             if len(data.X.train_folds) > self.n_jobs:
+                mp.set_start_method('spawn', force=True)
                 with mp.Pool(processes=self.n_jobs) as pool:
-                    aucs = pool.imap(self._fit_and_evaluate, [(model, X_train, y_train, X_val, y_val) for
+                    for auc in pool.map(self._fit_and_evaluate, [(model, X_train, y_train, X_val, y_val) for
                                                               X_train, y_train, _, X_val, y_val, _ in
-                                                              data.iter_training()])
+                                                              data.iter_training()]):
+                        aucs.append(auc)
 
             else:
-                aucs = []
                 for X_train, y_train, _, X_val, y_val, _ in data.iter_training():
                     auc_val = self._fit_and_evaluate((model, X_train, y_train, X_val, y_val))
                     aucs.append(auc_val)
@@ -93,7 +94,10 @@ class Trainer(OrigTrainer):
         """Fit the model and evaluate on validation data."""
         model, X_train, y_train, X_val, y_val = args
 
-        model.fit(X_train, y_train)
+        _X_train = X_train.copy()
+        _y_train = y_train.copy()
+
+        model.fit(_X_train, _y_train)
 
         y_pred = model.predict_proba(X_val)
 
@@ -121,13 +125,16 @@ class Trainer(OrigTrainer):
     def get_preprocessed_pickle(self):
         pkl_path = self.result_dir / "preprocessed.pkl"
         with open(pkl_path, "rb") as f:
-            preprocessed_data, preprocesser_kwargs = joblib.load(f)
-        return preprocessed_data, preprocesser_kwargs
+            preprocessed_data, preprocessor_kwargs = joblib.load(f)
+        return preprocessed_data, preprocessor_kwargs
 
     def log_train_auc(self, model: MLClassifier, data: TrainingData):
         y_true = data.y.train
+        X_train = data.X.train
 
-        y_pred_proba = model.predict_proba(data.X.train)
+        model.fit(X_train, y_true)
+
+        y_pred_proba = model.predict_proba(X_train)
 
         train_auc = self.get_auc(y_true, y_pred_proba)
         mlflow.log_metric("AUC_train", float(train_auc))
@@ -135,7 +142,10 @@ class Trainer(OrigTrainer):
     def save_best_preprocessor(self, best_trial_params: dict):
         feature_selection = best_trial_params["feature_selection_method"]
         oversampling = best_trial_params["oversampling_method"]
-        preprocessor_kwargs = self._existing_preprocess_kwargs.copy()
+
+        preprocessed_data, preprocessor_kwargs = self.get_preprocessed_pickle()
+
+        log_preprocessed_data(preprocessed_data[feature_selection][oversampling])
 
         preprocessor_kwargs.update({
             'feature_selection_method': feature_selection,
@@ -143,13 +153,12 @@ class Trainer(OrigTrainer):
         })
         preprocessor = Preprocessor(**preprocessor_kwargs)
         preprocessor._fit_transform(self.dataset.X, self.dataset.y)
+
         if "select" in preprocessor.pipeline.named_steps:
             selected_features = preprocessor.pipeline[
                 "select"
             ].selected_features
-            mlflow_utils.log_dict_as_artifact(
-                selected_features, "selected_features"
-            )
+            mlflow.log_dict(selected_features, "feature_analysis/selected_features.yml")
         if "autoencoder" in preprocessor.pipeline.named_steps:
             mlflow_utils.log_dict_as_artifact(
                 preprocessor_kwargs['autoencoder'], "autoencoder"
@@ -194,3 +203,38 @@ class Trainer(OrigTrainer):
 
         data_preprocessed = best_trial.user_attrs["data_preprocessed"]
         self.log_train_auc(best_model, data_preprocessed)
+
+        log_hydra(self.result_dir)
+
+
+import tempfile
+from pathlib import Path
+import pickle
+import os
+
+def log_preprocessed_data(data):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        save_dir = Path(tmp_dir)/'preprocessed_data.pkl'
+        with open(save_dir, 'wb') as f:
+            pickle.dump(data, f)
+        mlflow.log_artifact(str(save_dir), 'feature_dataset')
+
+
+def log_hydra(result_dir):
+    """
+    Checks if a '.hydra' directory exists in the specified result directory.
+    If it exists, logs the directory as an artifact in the currently active MLflow run.
+
+    Parameters:
+    - result_dir (str): Path to the directory where results (and potentially the .hydra folder) are stored.
+    """
+    # Construct the path to the .hydra folder
+    hydra_path = os.path.join(result_dir, '.hydra')
+    
+    # Check if the .hydra folder exists
+    if os.path.exists(hydra_path) and os.path.isdir(hydra_path):
+        # Log the .hydra folder as an artifact
+        mlflow.log_artifacts(hydra_path, artifact_path='hydra')
+    else:
+        # .hydra folder does not exist or is not a directory
+        print(f"No .hydra folder found at {hydra_path}.")
