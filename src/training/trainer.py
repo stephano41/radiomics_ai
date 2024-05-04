@@ -9,10 +9,10 @@ from autorad.config.type_definitions import PathLike
 from autorad.data import FeatureDataset, TrainingData
 from autorad.models import MLClassifier
 from autorad.training import Trainer as OrigTrainer, train_utils
-from autorad.utils import mlflow_utils
 from optuna.trial import Trial
 import multiprocessing as mp
 from src.metrics import roc_auc, pr_auc
+from src.utils.trainer import log_preprocessed_data, log_hydra
 from src.preprocessing import Preprocessor
 log = logging.getLogger(__name__)
 
@@ -40,20 +40,8 @@ class Trainer(OrigTrainer):
         else:
             raise ValueError(f'metric not implemented, got {metric}')
 
-        self._existing_preprocess_kwargs = None
         super().__init__(dataset, models, result_dir)
 
-    def run(
-            self,
-            auto_preprocess: bool = False,
-            experiment_name="model_training",
-            mlflow_start_kwargs=None
-    ):
-        if auto_preprocess:
-            _, self._existing_preprocess_kwargs = self.get_preprocessed_pickle()
-        if mlflow_start_kwargs is None:
-            mlflow_start_kwargs = {}
-        super().run(auto_preprocess, experiment_name, mlflow_start_kwargs)
 
     def _objective(self, trial: Trial, auto_preprocess=False) -> float:
         """Get params from optuna trial, return the metric."""
@@ -143,9 +131,7 @@ class Trainer(OrigTrainer):
         feature_selection = best_trial_params["feature_selection_method"]
         oversampling = best_trial_params["oversampling_method"]
 
-        preprocessed_data, preprocessor_kwargs = self.get_preprocessed_pickle()
-
-        log_preprocessed_data(preprocessed_data[feature_selection][oversampling])
+        _, preprocessor_kwargs = self.get_preprocessed_pickle()
 
         preprocessor_kwargs.update({
             'feature_selection_method': feature_selection,
@@ -153,16 +139,6 @@ class Trainer(OrigTrainer):
         })
         preprocessor = Preprocessor(**preprocessor_kwargs)
         preprocessor._fit_transform(self.dataset.X, self.dataset.y)
-
-        if "select" in preprocessor.pipeline.named_steps:
-            selected_features = preprocessor.pipeline[
-                "select"
-            ].selected_features
-            mlflow.log_dict(selected_features, "feature_analysis/selected_features.yml")
-        if "autoencoder" in preprocessor.pipeline.named_steps:
-            mlflow_utils.log_dict_as_artifact(
-                preprocessor_kwargs['autoencoder'], "autoencoder"
-            )
 
         mlflow.sklearn.log_model(preprocessor, "preprocessor")
 
@@ -173,16 +149,17 @@ class Trainer(OrigTrainer):
 
         selected_trials = study_df[study_df['user_attrs_AUC_val'] >= cutoff]
 
-        min_rsd_row = selected_trials[
+        min_std_row = selected_trials[
             selected_trials['user_attrs_std_AUC_val'] == selected_trials['user_attrs_std_AUC_val'].min()]
 
-        best_trial_number = min_rsd_row['number'].iloc[0]
+        best_trial_number = min_std_row['number'].iloc[0]
 
         for trial in study.trials:
             if trial.number == best_trial_number:
                 log.info(
                     f'Best trial was number {best_trial_number}, {trial.params} with AUC: {trial.user_attrs["AUC_val"]} and standard deviation: {trial.user_attrs["std_AUC_val"]} ')
                 return trial
+        raise ValueError("trial number of best trial not found in study dataframe!")
 
     def log_to_mlflow(self, study):
         best_trial = self.get_best_trial(study)
@@ -192,6 +169,7 @@ class Trainer(OrigTrainer):
         train_utils.log_optuna(study)
 
         best_model = best_trial.user_attrs["model"]
+        best_model.fit(self.dataset.X, self.dataset.y)
         best_model.save_to_mlflow()
 
         best_params = best_trial.params
@@ -203,38 +181,8 @@ class Trainer(OrigTrainer):
 
         data_preprocessed = best_trial.user_attrs["data_preprocessed"]
         self.log_train_auc(best_model, data_preprocessed)
+        log_preprocessed_data(data_preprocessed)
 
         log_hydra(self.result_dir)
 
 
-import tempfile
-from pathlib import Path
-import pickle
-import os
-
-def log_preprocessed_data(data):
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        save_dir = Path(tmp_dir)/'preprocessed_data.pkl'
-        with open(save_dir, 'wb') as f:
-            pickle.dump(data, f)
-        mlflow.log_artifact(str(save_dir), 'feature_dataset')
-
-
-def log_hydra(result_dir):
-    """
-    Checks if a '.hydra' directory exists in the specified result directory.
-    If it exists, logs the directory as an artifact in the currently active MLflow run.
-
-    Parameters:
-    - result_dir (str): Path to the directory where results (and potentially the .hydra folder) are stored.
-    """
-    # Construct the path to the .hydra folder
-    hydra_path = os.path.join(result_dir, '.hydra')
-    
-    # Check if the .hydra folder exists
-    if os.path.exists(hydra_path) and os.path.isdir(hydra_path):
-        # Log the .hydra folder as an artifact
-        mlflow.log_artifacts(hydra_path, artifact_path='hydra')
-    else:
-        # .hydra folder does not exist or is not a directory
-        print(f"No .hydra folder found at {hydra_path}.")

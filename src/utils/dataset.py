@@ -79,7 +79,7 @@ def plot_slices(output_tensor, slice_index, num_samples=5, original_tensor=None,
 
 def get_multi_paths_with_separate_folder_per_case(
         data_dir: PathLike,
-        image_stems: Sequence[str] = ("image"),
+        image_stems: Sequence[str] = ("image",),
         mask_stem: str = "segmentation",
         relative: bool = False,
 ) -> pd.DataFrame:

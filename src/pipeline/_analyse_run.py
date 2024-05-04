@@ -4,8 +4,8 @@ import pickle
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from autorad.inference.infer_utils import get_last_run_from_experiment_name, load_dataset_artifacts
-import yaml
+from autorad.inference.infer_utils import get_last_run_from_experiment_name
+from autorad.utils import io
 from src.analysis import get_shap_values, plot_shap_bar, summate_shap_bar, plot_dependence_scatter_plot, \
     plot_correlation_graph, plot_calibration_curve, plot_net_benefit
 
@@ -29,6 +29,7 @@ def analyse_run(config):
     logger.info(f'analysing {run.run_id}')
     output_dir = run.artifact_uri.removeprefix('file://')
 
+    os.mkdir(os.path.join(output_dir, 'feature_analysis'))
     shap_values_file = os.path.join(output_dir, 'feature_analysis/shap_values_datas.pkl')
     if os.path.exists(shap_values_file):
         # If the file exists, load shap_values from it
@@ -55,8 +56,7 @@ def analyse_run(config):
 
     top_features = get_top_shap_feature_names(shap_values, ascending=False, n_features=12)
 
-    with open(os.path.join(output_dir, 'feature_analysis/selected_features.yml'), 'w') as f:
-        yaml.dump(top_features, f)
+    io.save_yaml(top_features, os.path.join(output_dir, 'feature_analysis/selected_features.yml'))
 
     plot_correlation_graph(run, feature_names=top_features, plots_per_row=3,
                            save_dir=os.path.join(output_dir, 'feature_analysis/feature_correlation_plot.png'),

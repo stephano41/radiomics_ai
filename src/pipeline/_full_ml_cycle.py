@@ -84,7 +84,7 @@ def full_ml_cycle(config):
     output_dir = os.path.normpath(hydra.utils.HydraConfig.get().run.dir)
 
     # Save the extracted feature data to CSV in the output directory
-    feature_dataset.df.to_csv(os.path.join(output_dir, 'extracted_features.csv'))
+    feature_dataset.df.to_csv(os.path.join(output_dir, 'extracted_features.csv'), index=False)
 
     # Split the dataset according to configuration and save the split details
     feature_dataset = split_feature_dataset(feature_dataset,
