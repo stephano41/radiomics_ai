@@ -94,6 +94,7 @@ def extract_features(image_stems: Sequence[str], paths_df: pd.DataFrame, data_di
                      n_jobs: int) -> pd.DataFrame:
     """ Extract features for each image stem and concatenate them into a single DataFrame. """
     feature_dfs = []
+    mlflow_run_id = None
     for image_stem in image_stems:
         image_dataset = ImageDataset(
             paths_df,
@@ -103,7 +104,8 @@ def extract_features(image_stems: Sequence[str], paths_df: pd.DataFrame, data_di
         )
         # TODO featureextractor to log the same mlflow run id
         extractor = FeatureExtractor(image_dataset, extraction_params=extraction_params, n_jobs=n_jobs)
-        feature_df = extractor.run()
+        feature_df = extractor.run(run_id=mlflow_run_id)
+        mlflow_run_id = extractor.run_id_
         feature_df = feature_df.rename(columns={
             name: f'{name}_{image_stem}' for name in filter_pyradiomics_names(feature_df.columns)
         })
