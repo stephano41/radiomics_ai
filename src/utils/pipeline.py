@@ -85,9 +85,9 @@ def get_feature_dataset(target_column: str, image_dataset=None, label_csv_path=N
                               ID_colname='ID')
 
 
-def load_existing_features(existing_feature_path: str, target_column: str) -> FeatureDataset:
+def load_existing_features(existing_feature_path: str, target_column: str, additional_features) -> FeatureDataset:
     """ Load existing feature dataset from a CSV file. """
-    return FeatureDataset(pd.read_csv(existing_feature_path), target=target_column, ID_colname='ID')
+    return FeatureDataset(pd.read_csv(existing_feature_path), target=target_column, ID_colname='ID', additional_features=additional_features)
 
 
 def extract_features(image_stems: Sequence[str], paths_df: pd.DataFrame, data_dir: str, extraction_params: str,
@@ -135,8 +135,11 @@ def get_multimodal_feature_dataset(
         existing_feature_df: Optional[str] = None
 ) -> FeatureDataset:
     """ Orchestrates the creation of a multimodal feature dataset. """
+    if additional_features is None:
+        additional_features = [] 
+    
     if existing_feature_df:
-        return load_existing_features(existing_feature_df, target_column)
+        return load_existing_features(existing_feature_df, target_column, additional_features)
 
     paths_df = get_multi_paths_with_separate_folder_per_case(
         data_dir, relative=True, image_stems=image_stems, mask_stem=mask_stem
@@ -144,8 +147,7 @@ def get_multimodal_feature_dataset(
     all_feature_df = extract_features(image_stems, paths_df, data_dir, extraction_params, n_jobs)
     merged_feature_df = merge_labels(all_feature_df, label_csv_path, label_csv_encoding, feature_df_merger)
 
-    if additional_features is None:
-        additional_features = [] 
+
     return FeatureDataset(merged_feature_df, target=target_column, ID_colname='ID',
                           additional_features=additional_features)
 
