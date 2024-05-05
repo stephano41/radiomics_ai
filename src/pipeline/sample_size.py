@@ -17,7 +17,7 @@ from src.evaluation import Bootstrap
 from src.utils.pipeline import get_multimodal_feature_dataset, split_feature_dataset
 from src.preprocessing import run_auto_preprocessing
 from src.training import Trainer
-from src.utils.inference import get_pipeline_from_last_run
+from autorad.inference.infer_utils import get_pipeline_from_last_experiment_name
 
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ def get_sample_size(config):
         trainer.set_optimizer('optuna', n_trials=config.optimizer.n_trials)
         trainer.run(auto_preprocess=True, experiment_name=experiment_name)
 
-        pipeline = get_pipeline_from_last_run(experiment_name)
+        pipeline = get_pipeline_from_last_experiment_name(experiment_name)
 
         evaluator = Bootstrap(feature_dataset.X, feature_dataset.y, **config.bootstrap)
 

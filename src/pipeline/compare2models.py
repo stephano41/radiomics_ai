@@ -2,8 +2,7 @@ import os
 
 import hydra
 from autorad.data import FeatureDataset
-from autorad.inference.infer_utils import load_dataset_artifacts
-from src.utils.inference import get_pipeline_from_run, get_run_info_as_series
+from autorad.inference.infer_utils import get_pipeline_from_run, get_run_info_as_series, load_dataset_artifacts
 from src.evaluation.f_test import combined_ftest_5x2cv
 import logging
 

@@ -8,13 +8,12 @@ from autorad.inference import infer_utils
 import matplotlib.pyplot as plt
 import numpy as np
 import string
-import seaborn as sns
-from src.utils.inference import get_run_info_as_series, get_preprocessed_data
+from src.utils.inference import get_preprocessed_data
 
 
 def get_shap_values(run: str | pd.Series):
     if isinstance(run, str):
-        run = get_run_info_as_series(run)
+        run = infer_utils.get_run_info_as_series(run)
 
     artifact_uri = run.artifact_uri
     model = MLClassifier.load_from_mlflow(f"{artifact_uri}/model")

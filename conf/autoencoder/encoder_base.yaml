@@ -1,12 +1,4 @@
 
-# _target_: src.utils.make_dict_pipeline
-# steps_dict:
-#     image_preprocessor:
-#         _target_: src.preprocessing.SitkImageProcessor
-#         data_dir: ${feature_dataset.data_dir}
-#         image_stems: ${feature_dataset.image_stems}
-#         mask_stem: ${feature_dataset.mask_stem}
-#     autoencoder:
 _target_: src.models.NeuralNetEncoder
 max_epochs: 100
 verbose: 1

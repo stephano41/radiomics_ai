@@ -3,7 +3,7 @@ import numpy as np
 from statkit.decision import overall_net_benefit, net_benefit_action, NetBenefitDisplay, net_benefit, net_benefit_oracle
 import os
 import matplotlib.pyplot as plt
-from src.utils.inference import get_run_info_as_series
+from autorad.inference.infer_utils import get_run_info_as_series
 
 
 

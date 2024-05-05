@@ -7,7 +7,7 @@ import hydra
 from autorad.models import MLClassifier
 from omegaconf import OmegaConf
 
-from src.preprocessing import run_auto_preprocessing
+from src.preprocessing import run_auto_preprocessing, Preprocessor
 from src.training import Trainer
 from src.pipeline._evaluate_run import evaluate_run
 from src.pipeline._analyse_run import analyse_run
@@ -43,6 +43,7 @@ def train_models(config, feature_dataset, train_output_dir, run_name):
         result_dir=train_output_dir,
         multi_class=config.multi_class,
         labels=config.labels,
+        preprocessor=Preprocessor,
         **config.get('trainer', {})
     )
     experiment_name = config.name or datetime.now().strftime('%Y%m%d%H%M%S')

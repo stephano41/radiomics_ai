@@ -4,13 +4,6 @@ import os
 import mlflow
 
 
-def log_preprocessed_data(data):
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        save_dir = os.path.join(tmp_dir, 'preprocessed_data.pkl')
-        with open(save_dir, 'wb') as f:
-            pickle.dump(data, f)
-        mlflow.log_artifact(str(save_dir), 'feature_dataset')
-
 
 def log_hydra(result_dir):
     """

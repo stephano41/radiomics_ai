@@ -4,7 +4,7 @@ from autorad.inference.infer_utils import get_last_run_from_experiment_name, loa
     load_feature_dataset
 
 from src.evaluation import log_ci2mlflow, Bootstrap
-from src.utils.inference import get_pipeline_from_run, get_run_info_as_series
+from autorad.inference.infer_utils import get_pipeline_from_run, get_run_info_as_series
 
 logger = logging.getLogger(__name__)
 

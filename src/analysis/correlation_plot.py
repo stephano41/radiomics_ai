@@ -5,7 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import string
 import logging
-from src.utils.inference import get_run_info_as_series
+from autorad.inference.infer_utils import get_run_info_as_series
 
 logger = logging.getLogger(__name__)
 

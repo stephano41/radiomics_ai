@@ -5,7 +5,7 @@ from autorad.data import TrainingData, FeatureDataset
 import scipy.stats
 import tempfile
 import os
-from src.metrics import roc_auc
+from autorad.metrics import roc_auc
 from tqdm import tqdm
 
 

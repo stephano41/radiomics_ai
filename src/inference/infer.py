@@ -1,7 +1,7 @@
 from src.utils.dataset import get_multi_paths_with_separate_folder_per_case
 from src.utils.pipeline import extract_features
 from autorad.utils.extraction_utils import filter_pyradiomics_names
-from src.utils.inference import get_pipeline_from_run, get_run_info_as_series
+from autorad.inference.infer_utils import get_pipeline_from_run, get_run_info_as_series
 from autorad.config.type_definitions import PathLike
 from autorad.utils import io
 from collections.abc import Mapping

@@ -10,7 +10,7 @@ from src.analysis import get_shap_values, plot_shap_bar, summate_shap_bar, plot_
     plot_correlation_graph, plot_calibration_curve, plot_net_benefit
 
 from src.analysis.shap import get_top_shap_feature_names
-from src.utils.inference import get_run_info_as_series
+from autorad.inference.infer_utils import get_run_info_as_series
 
 logger = logging.getLogger(__name__)
 

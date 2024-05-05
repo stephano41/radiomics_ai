@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import get_scorer, make_scorer, roc_curve
 
-from src.metrics import specificity, negative_predictive_value, roc_auc
-
+from src.metrics import specificity, negative_predictive_value
+from autorad.metrics import roc_auc
 
 class Scorer:
     def __init__(self, multiclass=False, labels: List = None):

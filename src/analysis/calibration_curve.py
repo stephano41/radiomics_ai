@@ -7,7 +7,7 @@ import numpy as np
 import os
 from .hosmer_lemeshow import hosmer_lemeshow
 import logging
-from src.utils.inference import get_run_info_as_series
+from autorad.inference.infer_utils import get_run_info_as_series
 
 logger = logging.getLogger(__name__)
 
