@@ -29,7 +29,8 @@ def analyse_run(config):
     logger.info(f'analysing {run.run_id}')
     output_dir = run.artifact_uri.removeprefix('file://')
 
-    os.mkdir(os.path.join(output_dir, 'feature_analysis'))
+    if not os.path.exists(os.path.join(output_dir, 'feature_analysis')):
+        os.mkdir(os.path.join(output_dir, 'feature_analysis'))
     shap_values_file = os.path.join(output_dir, 'feature_analysis/shap_values_datas.pkl')
     if os.path.exists(shap_values_file):
         # If the file exists, load shap_values from it
@@ -46,7 +47,9 @@ def analyse_run(config):
     plot_shap_bar(shap_values, max_display=12,
                   save_dir=os.path.join(output_dir, 'feature_analysis/shap_bar_plot_overview.png'))
 
-    plot_dependence_scatter_plot(shap_values, shap_datas, n_features=12, save_dir=output_dir, plots_per_row=3)
+    plot_dependence_scatter_plot(shap_values, shap_datas, n_features=12, 
+                                 save_dir=os.path.join(output_dir, 'feature_analysis/shap_scatter_plot.png'), 
+                                 plots_per_row=3)
 
     if config.analysis.get('image_modalities', None) is not None:
         summate_shap_bar(shap_values, feature_substrings=config.analysis.image_modalities,

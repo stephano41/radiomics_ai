@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 
 
-def register_patients(data_dir, static_stem, moving_stem, output_stem='warped.nii', transform_method='rigid', n_cpu=2):
+def register_patients(data_dir, static_stem, moving_stem, output_stem='warped.nii', transform_method='rigid', id_regex="ID_*"):
     """
     Register multiple patients' MRI images using the specified transform method.
 
@@ -29,7 +29,7 @@ def register_patients(data_dir, static_stem, moving_stem, output_stem='warped.ni
     data_dir = Path(data_dir)
 
     # Get a list of all patient folders
-    patient_folders = list(data_dir.glob("ID_*"))
+    patient_folders = list(data_dir.glob(id_regex))
 
     # multiprocessing doesn't work
     for folder in patient_folders:

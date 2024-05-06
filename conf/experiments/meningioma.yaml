@@ -1,6 +1,6 @@
 # @package _global_
 name: meningioma
-labels: ["Grade 1","Grade 2"]
+labels: ["Low grade","High grade"]
 multi_class: raise
 
 feature_dataset:
@@ -19,30 +19,7 @@ bootstrap:
 optimizer:
     n_trials: 500
 
-split:
-  method: repeated_stratified_kfold_no_test
-  n_repeats: 20
 
-# models:
-#   - {_method_: Random Forest, class_weight: {0: 1, 1: 5}}
-#   - {_method_: SVM, class_weight: {0: 1, 1: 5}}
-#   - {_method_: Catboost, class_weights: {0: 1, 1: 5}}
-
-preprocessing:
-    feature_selection_methods:
-        # - anova
-        # - lasso
-        # - linear_svc
-        # - tree
-        # - {_method_: sf, direction: forward, n_jobs: 5, tol: 0.05, n_features_to_select: Null}
-        # - rfe
-        - mrmr
-        # - pca
-    feature_first: false
-    oversampling_methods:
-        - SMOTETomek
-        # - BorderlineSMOTE
-        # - SMOTE
 
 analysis:
     image_modalities: ['adc$', 't2$', 'flair$', 't1$', 't1ce$']
