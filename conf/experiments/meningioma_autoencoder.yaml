@@ -12,14 +12,9 @@ feature_dataset:
 
 preprocessing:
     feature_selection_methods:
-        - anova
         - lasso
-        - linear_svc
-        - tree
-        - {_method_: sf, direction: forward, n_jobs: 10, tol: 0.05, n_features_to_select: Null}
-        - rfe
-        - mrmr
-        - pca
+    oversampling_methods:
+        - SMOTEENN
 
 # add in deep features as image modality
 analysis:
