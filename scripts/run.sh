@@ -1,3 +1,0 @@
-#!/bin/bash
-sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest python main.py experiments=meningioma name=meningioma_default_mr feature_dataset.extraction_params='./conf/radiomic_params/mr_default.yaml'
-sudo docker run --gpus all --shm-size=1gb -it -d -v "$(pwd)":/opt/project/ --env AUTORAD_RESULT_DIR=./outputs --env TZ=Australia/Adelaide --env ENABLE_AUTORAD_LOGGING=0 --env HYDRA_FULL_ERROR=1 -p 8000:8000 steven_container:latest python main.py experiments=meningioma name=meningioma_voxel_based feature_dataset.extraction_params='./conf/radiomic_params/voxel_based.yaml'

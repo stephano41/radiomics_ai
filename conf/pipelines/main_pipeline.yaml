@@ -47,19 +47,19 @@ preprocessing:
     - lasso
     - linear_svc
     - tree
-    - {_method_: sf, direction: backward, n_jobs: 5, tol: 0.05}
+    - {_method_: sf, direction: forward, n_jobs: 5, tol: 0.05, n_features_to_select: Null}
     - {_method_: rfe, n_jobs: 5}
     - mrmr
     - pca
-#    boruta doesn't seem to work
-#    - boruta
+
   use_oversampling: True
   oversampling_methods:
     - SMOTE
-    - ADASYN
-    - BorderlineSMOTE
+    - SMOTETomek
+    - SMOTEENN
   autoencoder:
   encoder_colname: 'ID'
+  feature_first: false
 
 optimizer:
   n_trials: 10

@@ -13,10 +13,20 @@ class Inferrer:
         self.run=run
         if isinstance(run, str):
             self.run = get_run_info_as_series(run)
-        self.image_stems=image_stems,
-        self.mask_stem=mask_stem,
+        self.image_stems=image_stems
+        self.mask_stem=mask_stem
         self.extraction_config=extraction_config
         self.n_jobs=n_jobs
+
+    def get_extraction_config(self):
+        if self.extraction_config is not None:
+            return self.extraction_config
+        artifact_uri = self.run.artifact_uri.removeprefix('file://')
+
+        extraction_config_path=os.path.join(artifact_uri,'feature_extraction/extraction_config.yaml')
+        if os.path.isfile(extraction_config_path):
+            return extraction_config_path
+
 
     def extract_features(self, directory):
         paths_df = get_multi_paths_with_separate_folder_per_case(directory, image_stems=self.image_stems, mask_stem=self.mask_stem, relative=True)
