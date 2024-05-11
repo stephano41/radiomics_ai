@@ -41,7 +41,7 @@ def get_shap_values(run: str | pd.Series):
             _X_train, _y_train = preprocessor._fit_transform(_X_train, _y_train)
         model.fit(_X_train, _y_train)
         explainer = shap.Explainer(model.predict_proba_binary, _X_train)
-        shap_value = explainer(_X_train, max_evals=2 * _X_train.shape[1] + 1)
+        shap_value = explainer(_X_train)
         shap_value_pd = pd.DataFrame(shap_value.values,columns=shap_value.feature_names)
         shap_values.append(shap_value_pd)
 

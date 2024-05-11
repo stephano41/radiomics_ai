@@ -10,11 +10,11 @@ name: meningioma+autoencoder
 feature_dataset:
      additional_features: ['ID']
 
-preprocessing:
-    feature_selection_methods:
-        - lasso
-    oversampling_methods:
-        - SMOTEENN
+# preprocessing:
+#     feature_selection_methods:
+#         - lasso
+#     oversampling_methods:
+#         - SMOTEENN
 
 # add in deep features as image modality
 analysis:

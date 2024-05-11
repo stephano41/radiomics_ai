@@ -17,6 +17,7 @@ def get_preprocessed_data(run):
 
     preprocessed_pkl_path = os.path.join(artifact_uri, 'feature_dataset/preprocessed_data.pkl')
     if not os.path.exists(preprocessed_pkl_path):
+        log.warn("no preprocessed data found with associated run, make sure it's in the feature_dataset folder")
         return None
     
     with open(preprocessed_pkl_path, 'rb') as f:
