@@ -40,7 +40,7 @@ class BootstrapGenerator(object):
             raise ValueError("Number of splits must be greater than 1.")
         self.n_splits = n_splits
 
-    def split(self, X, y, groups=None):
+    def split(self, X, y, groups=None, n_samples=None):
         """
 
         y : array-like or None (default: None)
@@ -60,7 +60,7 @@ class BootstrapGenerator(object):
             stratify_arg = None
 
         for _ in range(self.n_splits):
-            train_idx = resample(sample_idx, replace=True, stratify=stratify_arg, random_state=self.random_seed)
+            train_idx = resample(sample_idx, replace=True, stratify=stratify_arg, random_state=self.random_seed, n_samples=n_samples)
             test_idx = np.array(list(set_idx - set(train_idx)))
 
             yield train_idx, test_idx

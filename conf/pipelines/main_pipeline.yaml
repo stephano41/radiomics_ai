@@ -48,7 +48,7 @@ preprocessing:
     - linear_svc
     - tree
     - {_method_: sf, direction: forward, n_jobs: 5, tol: 0.05, n_features_to_select: Null}
-    - {_method_: rfe, n_jobs: 5}
+    - rfe
     - mrmr
     - pca
 

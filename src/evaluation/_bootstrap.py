@@ -19,7 +19,7 @@ from .stratified_bootstrap import BootstrapGenerator
 # metrics to include: positive predictive value, negative predictive, sensitivity, specificity, AUC
 class Bootstrap:
     def __init__(self, X, Y, iters: int = 500, alpha: float = 0.95, num_processes: int = 2, method: str = '.632',
-                 stratify=False, labels=None, log_dir=None):
+                 stratify=False, labels=None, log_dir=None, n_samples_per_iter=None):
         if method not in [".632", ".632+", "oob"]:
             raise ValueError(f"invalid bootstrap method {method}")
 
@@ -34,7 +34,7 @@ class Bootstrap:
         self.scores = []
 
         oob = BootstrapGenerator(n_splits=iters, stratify=stratify)
-        self.oob_splits = list(oob.split(X, Y))
+        self.oob_splits = list(oob.split(X, Y, n_samples=n_samples_per_iter))
 
         if log_dir is not None:
             self._meta_file_path = os.path.join(log_dir, 'oob_splits.pkl')

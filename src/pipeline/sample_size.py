@@ -1,8 +1,6 @@
 from datetime import datetime
 from pathlib import Path
 
-from autorad.models import MLClassifier
-from autorad.data import FeatureDataset
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
@@ -10,14 +8,14 @@ from omegaconf import OmegaConf
 from sklearn.model_selection import train_test_split
 import hydra
 import os
+import seaborn as sns
 import logging
 import pickle
 import pandas as pd
 from src.evaluation import Bootstrap
-from src.utils.pipeline import get_multimodal_feature_dataset, split_feature_dataset
-from src.preprocessing import run_auto_preprocessing
-from src.training import Trainer
-from autorad.inference.infer_utils import get_pipeline_from_last_experiment_name
+from src.utils.pipeline import get_multimodal_feature_dataset
+from sklearn.metrics import auc as auc_metric
+from autorad.inference.infer_utils import get_pipeline_from_run, get_run_info_as_series
 
 
 logger = logging.getLogger(__name__)
@@ -31,56 +29,36 @@ def get_sample_size(config):
 
     dataset_size = len(feature_dataset.df)
     output_dir = hydra.utils.HydraConfig.get().run.dir
-    experiment_name = f"get_sample_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    confidence_intervals, tpr_fprs = [], []
+    experiment_name = f"sample_size_calculation"
+
+    pipeline = get_pipeline_from_run(get_run_info_as_series(config.run_id))
+
+    confidence_intervals, tpr_fprs, preds = [], [], []
+    aucs=[]
     sample_sizes = config.get('sample_sizes', _get_sample_sizes(dataset_size, 25))
     for sample_size in sample_sizes:
-        logger.info(f'evaluating at sample size {sample_size}')
-        # _, sample_x = train_test_split(feature_dataset.df, test_size=sample_size,
-        #                              stratify=feature_dataset.y)
-        sample_x = split_sample_w_minority(feature_dataset.df, int(sample_size), 6, feature_dataset.y)
-        sample_feature_ds = FeatureDataset(sample_x, target=config.feature_dataset.get('target_column', None), ID_colname='ID',
-                              additional_features=config.feature_dataset.get('additional_features', []))
-        sample_feature_ds = split_feature_dataset(sample_feature_ds,
-                                            save_path=os.path.join(output_dir, f'n={sample_size}_splits.yml'),
-                                            **config.split)
+        try:
+            logger.info(f'evaluating at sample size {sample_size}')
 
-        if config.models is None:
-            models = MLClassifier.initialize_default_sklearn_models()
-        else:
-            models = [MLClassifier.from_sklearn(model_name) for model_name in OmegaConf.to_container(config.models, resolve=True)]
+            evaluator = Bootstrap(feature_dataset.X, feature_dataset.y, n_samples_per_iter=sample_size,**config.bootstrap)
 
-        run_auto_preprocessing(data=sample_feature_ds.data,
-                               result_dir=Path(output_dir),
-                               **OmegaConf.to_container(config.preprocessing, resolve=True))
+            confidence_interval, tpr_fpr, pred = evaluator.run(pipeline)
 
-        trainer = Trainer(
-            dataset=sample_feature_ds,
-            models=models,
-            result_dir=output_dir,
-            multi_class=config.multi_class,
-            labels=config.labels
-        )
+            confidence_intervals.append(confidence_interval)
+            tpr_fprs.append(tpr_fpr)
+            preds.append(pred)
+            aucs.append(np.array([auc_metric(d['fpr'], d['tpr']) for d in tpr_fpr]))
 
-        trainer.set_optimizer('optuna', n_trials=config.optimizer.n_trials)
-        trainer.run(auto_preprocess=True, experiment_name=experiment_name)
+            with open(os.path.join(output_dir, f'sample_size_{sample_size}.pkl'), 'wb') as f:
+                pickle.dump((confidence_interval, tpr_fpr, pred), f)
 
-        pipeline = get_pipeline_from_last_experiment_name(experiment_name)
-
-        evaluator = Bootstrap(feature_dataset.X, feature_dataset.y, **config.bootstrap)
-
-        confidence_interval, tpr_fpr, preds = evaluator.run(pipeline)
-
-        confidence_intervals.append(confidence_interval)
-        tpr_fprs.append(tpr_fpr)
-
-        with open(os.path.join(output_dir, f'sample_size_{sample_size}.pkl'), 'wb') as f:
-            pickle.dump(confidence_interval, f)
-
-        logger.info(confidence_interval)
+            logger.info(f"sample size of {sample_size} yielded {confidence_interval}")
+        except Exception as e:
+            logger.error(e)
+            break
 
     logger.info('sample size calculation complete!')
-    plot_confidence_intervals(sample_sizes, [interval['roc_auc'] for interval in confidence_intervals],
+    plot_confidence_intervals(sample_sizes, aucs,
                               y_label='ROC AUC',
                               save_dir=os.path.join(output_dir,'sample_size_calculation.png'))
 
@@ -93,6 +71,7 @@ def _get_sample_sizes(dataset_size, min=16):
     exponentials.append(dataset_size)
     exponentials.reverse()
     return exponentials
+
 
 def split_sample_w_minority(df, final_size, minority_size, stratify_array):
     if final_size==len(df):
@@ -130,28 +109,23 @@ def plot_inverse_power_curve(x, y, derivative_threshold=0.00001):
     plt.plot(sample_sizes_extended, curve_extended, '--', color='gray')
 
 
-def plot_confidence_intervals(sample_sizes, confidence_intervals, y_label='roc_auc', save_dir=None):
+def plot_confidence_intervals(sample_sizes, aucs, y_label='roc_auc', save_dir=None):
     """
     :param sample_sizes: list of numbers
     :param confidence_intervals: expects in list of tuples [(a,b),(c,d)...]
     :return:
     """
-    assert len(confidence_intervals) == len(sample_sizes)
-    starts, ends = zip(*confidence_intervals)
-    plt.scatter(sample_sizes, starts, color='black', s=0)
-    plt.scatter(sample_sizes, ends, color='black', s=0)
+    df = pd.DataFrame({sample_sizes[i]: confidence_interval for i, confidence_interval in enumerate(aucs)})
+    df = df.iloc[::-1]
 
-    for i, _ in enumerate(sample_sizes):
-        plt.plot([sample_sizes[i], sample_sizes[i]], [starts[i], ends[i]], '_-k')
+    ax = sns.boxplot(data=df, order=df.columns)
 
-    plot_inverse_power_curve(sample_sizes, starts)
-
-    plot_inverse_power_curve(sample_sizes, ends)
-
-    plt.xlabel('Sample Size')
-    plt.ylabel(y_label)
-    plt.grid(True)
+    ax.set_xlabel("Sample Size")
+    ax.set_ylabel(y_label)
+    ax.grid()
+ 
     plt.tight_layout()
     if save_dir is not None:
         plt.savefig(save_dir, dpi=1200)
+        return ax
     plt.show()
