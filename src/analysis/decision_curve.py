@@ -7,7 +7,7 @@ from autorad.inference.infer_utils import get_run_info_as_series
 
 
 
-def plot_net_benefit(run, save_dir=None, thresholds=100, estimator_name=None, benefit_type='action'):
+def plot_net_benefit(run, save_dir=None, thresholds=100, estimator_name=None, benefit_type='action', xlim=0.4):
     if isinstance(run, str):
         run = get_run_info_as_series(run)
 
@@ -66,6 +66,7 @@ def plot_net_benefit(run, save_dir=None, thresholds=100, estimator_name=None, be
                                 estimator_name=estimator_name)
     display.plot()
     display.ax_.set_ylim(-0.05, mean_oracle+0.05)
+    display.ax_.set_xlim(0, xlim)
     display.ax_.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=4)
     if save_dir is None:
         plt.tight_layout()

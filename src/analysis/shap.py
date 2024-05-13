@@ -4,10 +4,13 @@ import shap
 import mlflow
 from autorad.models import MLClassifier
 from autorad.inference import infer_utils
+import seaborn as sns
 
 import matplotlib.pyplot as plt
 import numpy as np
 import string
+from collections import defaultdict 
+
 from src.utils.inference import get_preprocessed_data
 
 
@@ -40,7 +43,7 @@ def get_shap_values(run: str | pd.Series):
         if not auto_preprocessed:
             _X_train, _y_train = preprocessor._fit_transform(_X_train, _y_train)
         model.fit(_X_train, _y_train)
-        explainer = shap.Explainer(model.predict_proba_binary, _X_train)
+        explainer = shap.Explainer(model.predict_proba_binary, _X_train, algorithm='permutation')
         shap_value = explainer(_X_train, max_evals=2 * len(_X_train.columns) + 1)
         shap_value_pd = pd.DataFrame(shap_value.values,columns=shap_value.feature_names)
         shap_values.append(shap_value_pd)
@@ -101,29 +104,20 @@ def plot_shap_bar(shap_values, max_display=10, save_dir=None):
 def summate_shap_bar(shap_values, feature_substrings, save_dir=None, size=None):
     plt.close('all')
 
-    combined_shap_values_pd = get_abs_mean_shap_pd(shap_values)
+    result_feature_values=defaultdict(list)
+    result_feature_count = defaultdict(list)
 
-    mean_shap_values = combined_shap_values_pd.mean(0)
+    for shap_value_pd in shap_values:
+        for substring in feature_substrings:
+            features = shap_value_pd.filter(regex=substring)
+            stripped_substring = substring.translate(str.maketrans('', '', string.punctuation))
+            if not features.empty:
+                result_feature_values[stripped_substring].append(features.abs().mean().mean())
+                result_feature_count[stripped_substring].append(len(features))
 
-    result_feature_values = {}
-    result_feature_count = {}
-    for substring in feature_substrings:
-        features = mean_shap_values.filter(regex=substring)
-        stripped_substring = substring.translate(str.maketrans('', '', string.punctuation))
-        result_feature_values[stripped_substring] = features.sum() if not features.empty else 0
-        result_feature_count[stripped_substring] = len(features)
+    sorted_feature_values = sorted(result_feature_values.items(), key=lambda x: np.mean(x[1]), reverse=False)
 
-    sorted_feature_values = sorted(result_feature_values.items(), key=lambda x: x[1], reverse=False)
-
-    sorted_categories = [x[0] for x in sorted_feature_values]
-    values = [x[1] for x in sorted_feature_values]
-
-    plt.barh(sorted_categories, values, color='lightblue', edgecolor="black")
-
-    for index, category in enumerate(sorted_categories):
-        plt.text(result_feature_values[category], index,
-                #  f"{result_feature_values[category]:+.2e} (n={result_feature_count[category]})")
-                 f"{result_feature_values[category]:+.2e}")
+    sns.boxplot(data=pd.DataFrame({k: pd.Series(v) for k, v in sorted_feature_values}), orient='y')
 
 
     plt.xlabel('SHAP Value')
@@ -136,7 +130,7 @@ def summate_shap_bar(shap_values, feature_substrings, save_dir=None, size=None):
         plt.show()
         return fig
 
-    fig.savefig(save_dir, dpi=1200,)
+    fig.savefig(save_dir, dpi=1200)
     return fig
 
 
