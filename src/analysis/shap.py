@@ -158,7 +158,7 @@ def plot_dependence_scatter_plot(shap_values, shap_datas, n_features=10, save_di
         elif len(axes.shape)==1:
             selected_ax = axes[col_idx]
         
-        if idx >= n_features:
+        if idx >= n_features or idx >= len(sorted_shap_values_names):
             fig.delaxes(selected_ax)
             continue
 
