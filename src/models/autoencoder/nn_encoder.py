@@ -7,19 +7,24 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.base import TransformerMixin
-from skorch import NeuralNet, NeuralNetClassifier
+from skorch import NeuralNetClassifier
 from skorch.callbacks import PassthroughScoring, PrintLog, EpochTimer
 from skorch.utils import to_device, to_tensor, to_numpy
 import torch
 from torch.utils.data import WeightedRandomSampler
 from src.models.autoencoder.base_vae import BaseVAE
+import os
+import random
 
 
 class NeuralNetEncoder(NeuralNetClassifier, TransformerMixin):
-    def __init__(self, module: BaseVAE, output_format='numpy', weighted_sampler=False, weighted_sampler_weights=None, **kwargs):
+    def __init__(self, module: BaseVAE, output_format='numpy', weighted_sampler=False, weighted_sampler_weights=None, random_seed=123, **kwargs):
+        self.random_seed=random_seed
         self.output_format = output_format
         self.weighted_sampler=weighted_sampler
         self.weighted_sampler_weights = weighted_sampler_weights
+
+        set_seed(random_seed)
 
         super().__init__(**preprocess_kwargs(module=module, **kwargs))
 
@@ -180,3 +185,14 @@ def preprocess_kwargs(**kwargs):
             _kwargs[k] = getattr(import_module(module, name), name)
 
     return _kwargs
+
+
+def set_seed(seed):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.manual_seed(seed)
+    torch.backends.cudnn.benchmark = False

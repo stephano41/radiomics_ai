@@ -1,8 +1,8 @@
 # @package _global_
 
-multi_class: ovo
+multi_class: raise
 name: wiki_sarcoma
-labels: [0,1,2]
+labels: ["Low-intermediate grade", "High grade"]
 
 feature_dataset:
   data_dir: ./data/wiki_sarcoma
