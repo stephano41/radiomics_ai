@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from sklearn.metrics import confusion_matrix, roc_auc_score, precision_recall_curve, auc
+from sklearn.metrics import confusion_matrix
 
 log = logging.getLogger(__name__)
 

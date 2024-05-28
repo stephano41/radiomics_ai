@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def compare2models(config):
     output_dir = hydra.utils.HydraConfig.get().run.dir
-    logger.info(f"comparing models {config.model1_run_id} and {config.model1_run_id}")
+    logger.info(f"comparing models {config.model1_run_id} and {config.model2_run_id}")
 
     model1_run = get_run_info_as_series(config.model1_run_id)
     model2_run = get_run_info_as_series(config.model2_run_id)
