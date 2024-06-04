@@ -5,10 +5,27 @@ import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from src.evaluation import Bootstrap
 from pytest import mark
-from sklearn.pipeline import make_pipeline
 from sklearn.dummy import DummyClassifier
-from src.models.autoencoder import NeuralNetEncoder
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from skorch import NeuralNetClassifier
+from sklearn.datasets import make_classification
+from src.evaluation import Bootstrap
 
+
+# Define a simple model with Skorch
+class SimpleNet(nn.Module):
+    def __init__(self):
+        super(SimpleNet, self).__init__()
+        self.fc1 = nn.Linear(20, 10)
+        self.fc2 = nn.Linear(10, 2)
+
+    def forward(self, X):
+        X = X.float()
+        X = torch.relu(self.fc1(X))
+        X = self.fc2(X)
+        return X
 
 @mark.parametrize('num_classes', [2,3])
 @mark.parametrize("bootstrap_method", ['oob','.632','.632+'])
@@ -22,24 +39,34 @@ def test_bootstrap(tmp_path, bootstrap_method, num_classes):
     evaluator = Bootstrap(X, Y, iters=5, num_processes=1, log_dir=tmp_path, method=bootstrap_method)
     evaluator.run(model)
 
-def test_bootstrap_multiprocessing(tmp_path):
-    X = np.random.random([100, 500])
-    Y = np.random.randint(0, 2, 100)
 
-    encoder = NeuralNetEncoder(module='src.models.autoencoder.DummyVAE',
-                               module__in_channels=1,
-                               module__latent_dim=64,
-                               module__hidden_dims=[8, 16, 32],
-                               module__finish_size=2,
-                               criterion='src.models.loss_funcs.VAELoss',
-                               max_epochs=2,
-                               dataset='src.dataset.dummy_dataset.DummyDataset',
-                               device='cuda'
-                               )
-    estimator = KNeighborsClassifier(3)
-    model = make_pipeline(encoder, estimator)
-    evaluator = Bootstrap(X, Y, iters=12, num_processes=4, log_dir=tmp_path, method='.632')
-    evaluator.run(model)
+@pytest.mark.gpu
+def test_bootstrap_multiprocessing_on_gpu():
+    # Generate a dummy dataset
+    X, y = make_classification(n_samples=1000, n_features=20, n_classes=2, random_state=42)
+    X = X.astype('float32')
+
+    net = NeuralNetClassifier(
+        SimpleNet,
+        max_epochs=10,
+        lr=0.01,
+        optimizer=optim.Adam,
+        criterion=nn.CrossEntropyLoss,
+        device='cuda',
+        iterator_train__num_workers=3
+    )
+
+    # Initialize and run bootstrap
+    bootstrap = Bootstrap(X, y, iters=10, num_processes=2, stratify=True, num_gpus=1)
+    ci, final_fpr_tpr, final_y_pred = bootstrap.run(net)
+
+    # Add assertions to validate the output
+    assert ci is not None, "Confidence intervals should not be None"
+    assert isinstance(ci, dict), "Confidence intervals should be a dictionary"
+    if final_fpr_tpr:
+        assert isinstance(final_fpr_tpr, list), "FPR and TPR should be a list"
+    if final_y_pred:
+        assert isinstance(final_y_pred, list), "Final predictions should be a list"
 
 
 def test_combined5x2ftest(tmp_path):

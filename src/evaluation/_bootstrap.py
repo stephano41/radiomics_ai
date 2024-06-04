@@ -11,15 +11,14 @@ from tqdm import tqdm
 from src.metrics import Scorer
 from sklearn.metrics import  roc_curve
 import pickle
-
+import ray
 from .roc_curve import plot_roc_curve_with_ci
 from .stratified_bootstrap import BootstrapGenerator
 
 
-# metrics to include: positive predictive value, negative predictive, sensitivity, specificity, AUC
 class Bootstrap:
     def __init__(self, X, Y, iters: int = 500, alpha: float = 0.95, num_processes: int = 2, method: str = '.632',
-                 stratify=False, labels=None, log_dir=None, n_samples_per_iter=None):
+                 stratify=False, labels=None, log_dir=None, n_samples_per_iter=None, num_gpu=0):
         if method not in [".632", ".632+", "oob"]:
             raise ValueError(f"invalid bootstrap method {method}")
 
@@ -31,6 +30,7 @@ class Bootstrap:
         self.method = method
         self.log_dir = log_dir
         self.labels = labels
+        self.num_gpu=num_gpu
         self.scores = []
 
         oob = BootstrapGenerator(n_splits=iters, stratify=stratify)
@@ -76,18 +76,33 @@ class Bootstrap:
         partial_bootstrap = partial(self._one_bootstrap, model=model, scoring_func=score_func)
 
         if self.num_processes > 1:
-            mp.set_start_method('spawn', force=True)
-            with mp.Pool(self.num_processes) as pool:
-                for score in tqdm(pool.imap_unordered(partial_bootstrap, self.oob_splits),
-                                  total=len(self.oob_splits)):
+            if self.num_gpu<=0:
+                print('using pytorch multiprocessing')
+                mp.set_start_method('spawn', force=True)
+                with mp.Pool(self.num_processes) as pool:
+                    for score in tqdm(pool.imap_unordered(partial_bootstrap, self.oob_splits),
+                                    total=len(self.oob_splits)):
+                        self.scores.append(score)
+            else:
+                print('using ray multiprocessing')
+                ray.init(ignore_reinit_error=True)
+
+                self_id, model_id, score_func_id = ray.put(self), ray.put(model), ray.put(score_func)
+                futures = [self._one_bootstrap_ray.options(num_gpus=self.num_gpu).remote(self_id, idx, model_id, score_func_id) for idx in self.oob_splits]
+                for score in tqdm(ray.get(futures), total=len(futures)):
                     self.scores.append(score)
-                    self.log_scores(self.scores)
+            
+            self.log_scores(self.scores)
         else:
             for idx in tqdm(self.oob_splits):
                 self.scores.append(partial_bootstrap(idx))
                 self.log_scores(self.scores)
 
         return self.post_scores_processing(self.scores)
+    
+    @ray.remote
+    def _one_bootstrap_ray(self, idx, model, scoring_func):
+        return self._one_bootstrap(idx, model, scoring_func)
 
     def post_scores_processing(self, scores):
         pd_scores = pd.concat([t[0] for t in scores], ignore_index=True)
