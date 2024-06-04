@@ -51,7 +51,8 @@ class FMCIBModel(nn.Module):
                 loaded_weights[key] = expand_weights(trained_trunk[key], v)
         
         msg = self.trunk.load_state_dict(loaded_weights, strict=False)
-        logger.warning(f"Missing keys: {msg[0]} and unexpected keys: {msg[1]}")
+        if msg[0] or msg[1]:
+            logger.warning(f"Missing keys: {msg[0]} and unexpected keys: {msg[1]}")
 
     def generate_latent_vars(self, x:torch.tensor):
         self.eval()
